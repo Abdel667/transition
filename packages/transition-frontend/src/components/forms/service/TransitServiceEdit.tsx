@@ -25,6 +25,7 @@ import * as ServiceUtils from '../../../services/transitService/TransitServiceUt
 import Service, { serviceDays } from 'transition-common/lib/services/service/Service';
 import ServiceCollection from 'transition-common/lib/services/service/ServiceCollection';
 import TransitServiceFilterableList from './TransitServiceFilterableList';
+import TransitServiceLinesDetail from '../service/TransitServiceLinesDetail';
 
 interface ServiceFormProps extends WithTranslation {
     service: Service;
@@ -371,6 +372,11 @@ class TransitServiceEdit extends SaveableObjectForm<Service, ServiceFormProps, S
                             closeModal={this.closeBackConfirmModal}
                         />
                     )}
+                    <Collapsible trigger={this.props.t('transit:Lignes')} open={true} transitionTime={100}>
+                        <div className="tr__form-section">
+                            <TransitServiceLinesDetail service={this.props.service} />
+                        </div>
+                    </Collapsible>
                 </div>
             </form>
         );
