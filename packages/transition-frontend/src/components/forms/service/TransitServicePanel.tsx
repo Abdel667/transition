@@ -17,6 +17,7 @@ import CollectionSaveToCacheButtons from '../../parts/CollectionSaveToCacheButto
 import ServiceEdit from './TransitServiceEdit';
 import ServicesList from './TransitServiceList';
 import ServicesImportForm from './TransitServicesImportForm';
+import LoadingPage from 'chaire-lib-frontend/lib/components/pages/LoadingPage';
 
 // Using a state object instead of 2 useState hooks because we want this object
 // to be modified and cause a re-render if the selection or collection was
@@ -32,6 +33,7 @@ const ServicesPanel: React.FunctionComponent<WithTranslation> = (props: WithTran
         serviceCollection: serviceLocator.collectionManager.get('services'),
         selectedService: serviceLocator.selectedObjectsManager.get('service')
     });
+    const [linesLoaded, setLinesLoaded] = React.useState(serviceLocator.collectionManager.get('lines') !== undefined);
 
     const onServiceCollectionUpdate = () =>
         setState(({ selectedService }) => ({
@@ -45,6 +47,8 @@ const ServicesPanel: React.FunctionComponent<WithTranslation> = (props: WithTran
         }));
 
     React.useEffect(() => {
+        const onLineCollectionUpdate = () => setLinesLoaded(true);
+        serviceLocator.eventManager.on('collection.update.lines', onLineCollectionUpdate);
         serviceLocator.eventManager.on('collection.update.services', onServiceCollectionUpdate);
         serviceLocator.eventManager.on('selected.update.service', onSelectedServiceUpdate);
         serviceLocator.eventManager.on('selected.deselect.service', onSelectedServiceUpdate);
@@ -53,13 +57,16 @@ const ServicesPanel: React.FunctionComponent<WithTranslation> = (props: WithTran
             state.serviceCollection.loadFromServer(serviceLocator.socketEventManager, serviceLocator.collectionManager);
         }
         return () => {
+            serviceLocator.eventManager.off('collection.update.lines', onLineCollectionUpdate);
             serviceLocator.eventManager.off('collection.update.services', onServiceCollectionUpdate);
             serviceLocator.eventManager.off('selected.update.service', onSelectedServiceUpdate);
             serviceLocator.eventManager.off('selected.deselect.service', onSelectedServiceUpdate);
         };
     }, []);
 
-    return (
+    return state.serviceCollection === undefined || !linesLoaded ? (
+        <LoadingPage />
+    ) : (
         <div id="tr__form-transit-services-panel" className="tr__form-transit-services-panel tr__panel">
             {!state.selectedService && !importerSelected && (
                 <ServicesList selectedService={state.selectedService} serviceCollection={state.serviceCollection} />

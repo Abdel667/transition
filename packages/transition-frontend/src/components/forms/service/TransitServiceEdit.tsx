@@ -8,6 +8,7 @@ import React from 'react';
 import Collapsible from 'react-collapsible';
 import { withTranslation, WithTranslation } from 'react-i18next';
 import moment from 'moment';
+import { featureCollection as turfFeatureCollection } from '@turf/turf';
 
 import InputString from 'chaire-lib-frontend/lib/components/input/InputString';
 import InputText from 'chaire-lib-frontend/lib/components/input/InputText';
@@ -25,6 +26,11 @@ import * as ServiceUtils from '../../../services/transitService/TransitServiceUt
 import Service, { serviceDays } from 'transition-common/lib/services/service/Service';
 import ServiceCollection from 'transition-common/lib/services/service/ServiceCollection';
 import TransitServiceFilterableList from './TransitServiceFilterableList';
+import * as Status from 'chaire-lib-common/lib/utils/Status';
+import ServiceLinesDetail from './TransitServiceLinesDetail';
+import { PathAttributes } from 'transition-common/lib/services/path/Path';
+import { EventManager } from 'chaire-lib-common/lib/services/events/EventManager';
+import { MapUpdateLayerEventType } from 'chaire-lib-frontend/lib/services/map/events/MapEventsCallbacks';
 
 interface ServiceFormProps extends WithTranslation {
     service: Service;
@@ -35,6 +41,7 @@ interface ServiceFormState extends SaveableObjectState<Service> {
     mergedServices: any[];
     confirmModalMergeIsOpen: boolean;
     serviceErrors: string[];
+    paths: GeoJSON.FeatureCollection<GeoJSON.LineString, PathAttributes>;
 }
 
 class TransitServiceEdit extends SaveableObjectForm<Service, ServiceFormProps, ServiceFormState> {
@@ -52,8 +59,43 @@ class TransitServiceEdit extends SaveableObjectForm<Service, ServiceFormProps, S
             formValues: {},
             selectedObjectName: 'service',
             collectionName: 'services',
-            serviceErrors: []
+            serviceErrors: [],
+            paths: turfFeatureCollection([])
         };
+    }
+
+    private updateTransitPathLayer = () => {
+        serviceLocator.socketEventManager.emit(
+            'transitPaths.getForServices',
+            [this.props.service.attributes.id],
+            (status: Status.Status<GeoJSON.FeatureCollection<GeoJSON.LineString, PathAttributes>>) => {
+                try {
+                    const paths = Status.unwrap(status);
+                    // TODO: The scenario may have excluded lines/services/agencies that should be excluded too
+                    (serviceLocator.eventManager as EventManager).emitEvent<MapUpdateLayerEventType>(
+                        'map.updateLayer',
+                        {
+                            layerName: 'transitPathsForServices',
+                            data: paths
+                        }
+                    );
+                    this.setState({ paths });
+                } catch {
+                    (serviceLocator.eventManager as EventManager).emitEvent<MapUpdateLayerEventType>(
+                        'map.updateLayer',
+                        {
+                            layerName: 'transitPathsForServices',
+                            data: turfFeatureCollection([])
+                        }
+                    );
+                    this.setState({ paths: turfFeatureCollection([]) });
+                }
+            }
+        );
+    };
+
+    componentDidMount(): void {
+        this.updateTransitPathLayer();
     }
 
     onDayRangeChange(range) {
@@ -192,6 +234,13 @@ class TransitServiceEdit extends SaveableObjectForm<Service, ServiceFormProps, S
             confirmModalMergeIsOpen: false
         });
     };
+
+    protected onValueChange(path: string, newValue: { value: any; valid?: boolean } = { value: null, valid: true }) {
+        super.onValueChange(path, newValue);
+        if (path === 'services') {
+            this.updateTransitPathLayer();
+        }
+    }
 
     render() {
         const service = this.props.service;
@@ -371,6 +420,9 @@ class TransitServiceEdit extends SaveableObjectForm<Service, ServiceFormProps, S
                             closeModal={this.closeBackConfirmModal}
                         />
                     )}
+                </div>
+                <div>
+                    <ServiceLinesDetail service={service} paths={this.state.paths} />
                 </div>
             </form>
         );
