@@ -124,14 +124,15 @@ const TransitLineButton: React.FunctionComponent<LineButtonProps> = (props: Line
             {...(!props.hideActions && {
                 onSelect: { handler: onSelect },
                 onDuplicate: { handler: onDuplicate, altText: props.t('transit:transitLine:DuplicateLine') },
-                onDelete: !isFrozen && !lineIsSelected
-                    ? {
-                        handler: onDelete,
-                        message: props.t('transit:transitLine:ConfirmDelete'),
-                        altText: props.t('transit:transitLine:Delete')
-                    }
-                    : undefined
-            })} 
+                onDelete:
+                    !isFrozen && !lineIsSelected
+                        ? {
+                            handler: onDelete,
+                            message: props.t('transit:transitLine:ConfirmDelete'),
+                            altText: props.t('transit:transitLine:Delete')
+                        }
+                        : undefined
+            })}
         >
             <ButtonCell alignment="left">
                 <span className="_circle-button" style={{ backgroundColor: props.line.attributes.color }}></span>
@@ -174,19 +175,19 @@ const TransitLineButton: React.FunctionComponent<LineButtonProps> = (props: Line
             <ButtonCell alignment="left">{props.line.attributes.shortname}</ButtonCell>
             <ButtonCell alignment="left">{props.line.attributes.longname}</ButtonCell>
             {!props.hideDetails && (
-            <ButtonCell alignment="flush">
-                {pathsCount > 1
-                    ? props.t('transit:transitLine:nPaths', { n: pathsCount })
-                    : props.t('transit:transitLine:nPath', { n: pathsCount })}{' '}
-                {scheduledServicesCount > 0 && (
-                    <span className="_list-element">
-                        {scheduledServicesCount > 1
-                            ? props.t('transit:transitLine:nServices', { n: scheduledServicesCount })
-                            : props.t('transit:transitLine:nService', { n: scheduledServicesCount })}
-                    </span>
-                )}
-            </ButtonCell>
-        )}
+                <ButtonCell alignment="flush">
+                    {pathsCount > 1
+                        ? props.t('transit:transitLine:nPaths', { n: pathsCount })
+                        : props.t('transit:transitLine:nPath', { n: pathsCount })}{' '}
+                    {scheduledServicesCount > 0 && (
+                        <span className="_list-element">
+                            {scheduledServicesCount > 1
+                                ? props.t('transit:transitLine:nServices', { n: scheduledServicesCount })
+                                : props.t('transit:transitLine:nService', { n: scheduledServicesCount })}
+                        </span>
+                    )}
+                </ButtonCell>
+            )}
         </Button>
     );
 };

@@ -112,7 +112,7 @@ const TransitServiceButton: React.FunctionComponent<ScheduleButtonProps> = (prop
     } else if (service.get('start_date')) {
         serviceWeekdaysStr += ` [${service.get('start_date')} -> ...]`;
     }
-    
+
     return (
         <React.Fragment>
             <Button
@@ -155,16 +155,16 @@ const TransitServiceButton: React.FunctionComponent<ScheduleButtonProps> = (prop
                     <DocumentationTooltip dataTooltipId="line-tooltip" documentationLabel="line" />
                     <Collapsible
                         lazyRender={true}
-                            trigger={
-                                <MathJax.Provider>
-                                    {props.t('transit:transitLine:List')}&nbsp;
-                                        <span onClick={stopClick}>
-                                            <MathJax.Node inline formula={'L'} data-tooltip-id="line-tooltip" />
-                                        </span>
-                                </MathJax.Provider>
-                            }
-                            transitionTime={200}
-                        >
+                        trigger={
+                            <MathJax.Provider>
+                                {props.t('transit:transitLine:List')}&nbsp;
+                                <span onClick={stopClick}>
+                                    <MathJax.Node inline formula={'L'} data-tooltip-id="line-tooltip" />
+                                </span>
+                            </MathJax.Provider>
+                        }
+                        transitionTime={200}
+                    >
                         <ButtonList key={`lignes${props.service.getId()}`}>
                             <TransitServiceLinesDetail service={props.service} />
                         </ButtonList>

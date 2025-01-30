@@ -21,18 +21,13 @@ const TransitServiceLinesDetail: React.FunctionComponent<TransitServiceLinesDeta
         return lineCollection
             .getFeatures()
             .filter((line) => line.attributes.service_ids?.includes(service.getId()))
-            .sort((lineA, lineB) => lineA.toString().localeCompare(lineB.toString())); 
+            .sort((lineA, lineB) => lineA.toString().localeCompare(lineB.toString()));
     }, [service]);
 
     return (
         <div className="tr__form-service-lines">
             {lines.map((line) => (
-                <TransitLineButton 
-                    key={line.getId()} 
-                    line={line} 
-                    hideActions={true} 
-                    hideDetails={true} 
-                />
+                <TransitLineButton key={line.getId()} line={line} hideActions={true} hideDetails={true} />
             ))}
         </div>
     );
