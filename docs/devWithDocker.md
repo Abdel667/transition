@@ -20,7 +20,7 @@ Keep this access token for the next step.
 
 The `.env.docker` file is required to contain some environment variables that are not yet available through the configuration. The file has already been created for you, you simply need to finish the configuration. [It's located at the root of the `transition` repo](../.env.docker).
 
-In order for the map to be displayed correctly, simply modify the field `MAPBOX_ACCESS_TOKEN` with the key you've acquired in the previous section.
+In order for the map to be displayed correctly, simply modify the field `MAPBOX_ACCESS_TOKEN` with the key you've acquired in the previous section. You must not push your key to the remote repo.
 ```
 MAPBOX_ACCESS_TOKEN=<paste_your_key_here>
 ```
@@ -62,7 +62,7 @@ yarn setup && yarn migrate
 ```
 yarn node --max-old-space-size=4096 /app/packages/chaire-lib-backend/lib/scripts/osrm/downloadOsmNetworkData.task.js --polygon-file /app/examples/runtime/imports/polygon.geojson
 ```
-For the following command, you will need to choose the transportation types you'd like to import. You should ideally at least take `walking`, `driving` and `bus_urban`, but it's not essential for running the app.
+For the following command, you will need to choose the transportation types you'd like to import. You should ideally at least select `walking`, `driving` and `bus_urban`, but it's not essential for running the app.
 ```
 yarn node --max-old-space-size=4096 /app/packages/chaire-lib-backend/lib/scripts/osrm/prepareOsmNetworkData.task.js
 ```
@@ -72,9 +72,9 @@ Finally, in the same terminal, create your transition user. Run this command and
 yarn create-user 
 ```
 
-The setup is now complete. To finish the configuration, you need to restart the app. You can either use the stop/play buttons in Docker Desktop, or in your terminal with `docker compose -f docker-dev/docker-compose.yml restart`
+The setup is now complete. To finish the configuration, you need to restart the app. You can either use the stop/play buttons in Docker Desktop, or run `docker compose -f docker-dev/docker-compose.yml restart` in your terminal.
 
 ### 5.1 Run the application
 
-Once the app is setup, you only need `docker compose -f docker-dev/docker-compose.yml up` to launch it. If you make code changes, the app should rebuild itself automatically.
+Once the app is setup, you only need to run `docker compose -f docker-dev/docker-compose.yml up` to launch it. If you make code changes, the app should rebuild itself automatically.
  
