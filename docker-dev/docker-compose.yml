@@ -1,0 +1,125 @@
+# Example docker-compose file to run the Transition app in one container and a
+# second one for PostGis
+#
+# Use the official postgis image for the DB, with the default username and
+# password The DB data live in a docker volume. You can adapt to have it live in
+# a specific location To run with an existing DB, change the
+# PG_CONNECTION_STRING_PREFIX and drop the postgres service and related volume
+#
+# It uses the application configuration that was in the .env file that was built
+# in the application image. It expects the project runtime directory to be in
+# /app/examples/runtime.
+# It used "testtransition" as the application image, you can adapt to your prefered image name.
+#
+# See the lines marked CUSTOM to see how to customize the image with frequent customization needs
+
+# docker-compose version 1.22 is required for this version
+
+
+services:
+  transition-www:
+    image: testtransition
+    build:
+        context: ../.
+        dockerfile: docker-dev/Dockerfile
+    ports:
+      - 8080:8080
+    environment:
+      PG_CONNECTION_STRING_PREFIX: postgres://postgres:pass@postgres:5432/
+      # CUSTOM Add environment variables. This can be any variable contained in the .env file. These have precedence over their value in .env
+      # PROJECT_CONFIG: /config/config.js
+      # TRANSITION_DOTENV: /path/to/custom/.env
+    depends_on:
+      - postgres
+    #HACK, needed for running trRouting. See https://github.com/kaligrafy/trRouting/issues/23
+    tty: true
+    volumes:
+      # Fine-tune these paths to the target container's runtime directories. It should match what is in the `projectDirectory` in the `config.js` file
+      - transition-project-import:/app/examples/runtime/imports
+      - transition-project-osrm:/app/examples/runtime/osrm
+      # TODO Remove this once the cache is actually a cache
+      - transition-project-cache:/app/examples/runtime/cache
+      # CUSTOM For custom project with config file and runtime directory, add
+      # additional volumes here. The following lines adds the local
+      # `/home/myHome/transition-example` in the container's `/config` directory
+      # - "/home/myHome/transition-example/:/config"
+
+      # Bind mounts on the package directories. These enable instant code changes on the container without entirely rebuilding the image    
+      - ${PWD}/packages/chaire-lib-backend/src:/app/packages/chaire-lib-backend/src
+      - ${PWD}/packages/chaire-lib-backend/.eslintignore:/app/packages/chaire-lib-backend/.eslintignore
+      - ${PWD}/packages/chaire-lib-backend/.eslintrc.json:/app/packages/chaire-lib-backend/.eslintrc.json
+      - ${PWD}/packages/chaire-lib-backend/.prettierignore:/app/packages/chaire-lib-backend/.prettierignore
+      - ${PWD}/packages/chaire-lib-backend/.prettierrc.js:/app/packages/chaire-lib-backend/.prettierrc.js
+      - ${PWD}/packages/chaire-lib-backend/jest.config.js:/app/packages/chaire-lib-backend/jest.config.js
+      - ${PWD}/packages/chaire-lib-backend/jest.sequential.config.js:/app/packages/chaire-lib-backend/jest.sequential.config.js
+      - ${PWD}/packages/chaire-lib-backend/jestSetup.ts:/app/packages/chaire-lib-backend/jestSetup.ts
+      - ${PWD}/packages/chaire-lib-backend/package.json:/app/packages/chaire-lib-backend/package.json
+      - ${PWD}/packages/chaire-lib-backend/tsconfig.json:/app/packages/chaire-lib-backend/tsconfig.json
+
+      - ${PWD}/packages/chaire-lib-common/src:/app/packages/chaire-lib-common/src
+      - ${PWD}/packages/chaire-lib-common/.eslintignore:/app/packages/chaire-lib-common/.eslintignore
+      - ${PWD}/packages/chaire-lib-common/.eslintrc.json:/app/packages/chaire-lib-common/.eslintrc.json
+      - ${PWD}/packages/chaire-lib-common/.prettierignore:/app/packages/chaire-lib-common/.prettierignore
+      - ${PWD}/packages/chaire-lib-common/.prettierrc.js:/app/packages/chaire-lib-common/.prettierrc.js
+      - ${PWD}/packages/chaire-lib-common/jest.config.js:/app/packages/chaire-lib-common/jest.config.js
+      - ${PWD}/packages/chaire-lib-common/package.json:/app/packages/chaire-lib-common/package.json
+      - ${PWD}/packages/chaire-lib-common/tsconfig.json:/app/packages/chaire-lib-common/tsconfig.json
+            
+      - ${PWD}/packages/chaire-lib-frontend/src:/app/packages/chaire-lib-frontend/src
+      - ${PWD}/packages/chaire-lib-frontend/assets:/app/packages/chaire-lib-frontend/assets
+      - ${PWD}/packages/chaire-lib-frontend/.eslintignore:/app/packages/chaire-lib-frontend/.eslintignore
+      - ${PWD}/packages/chaire-lib-frontend/.eslintrc.json:/app/packages/chaire-lib-frontend/.eslintrc.json
+      - ${PWD}/packages/chaire-lib-frontend/.prettierignore:/app/packages/chaire-lib-frontend/.prettierignore
+      - ${PWD}/packages/chaire-lib-frontend/.prettierrc.js:/app/packages/chaire-lib-frontend/.prettierrc.js
+      - ${PWD}/packages/chaire-lib-frontend/jest.config.js:/app/packages/chaire-lib-frontend/jest.config.js
+      - ${PWD}/packages/chaire-lib-frontend/jestSetup.ts:/app/packages/chaire-lib-frontend/jestSetup.ts
+      - ${PWD}/packages/chaire-lib-frontend/package.json:/app/packages/chaire-lib-frontend/package.json
+      - ${PWD}/packages/chaire-lib-frontend/tsconfig.json:/app/packages/chaire-lib-frontend/tsconfig.json
+
+      - ${PWD}/packages/transition-backend/src:/app/packages/transition-backend/src
+      - ${PWD}/packages/transition-backend/file:/app/packages/transition-backend/file
+      - ${PWD}/packages/transition-backend/.eslintignore:/app/packages/transition-backend/.eslintignore
+      - ${PWD}/packages/transition-backend/.eslintrc.json:/app/packages/transition-backend/.eslintrc.json
+      - ${PWD}/packages/transition-backend/.prettierignore:/app/packages/transition-backend/.prettierignore
+      - ${PWD}/packages/transition-backend/.prettierrc.js:/app/packages/transition-backend/.prettierrc.js
+      - ${PWD}/packages/transition-backend/jest.config.js:/app/packages/transition-backend/jest.config.js
+      - ${PWD}/packages/transition-backend/jest.sequential.config.js:/app/packages/transition-backend/jest.sequential.config.js
+      - ${PWD}/packages/transition-backend/jestSetup.ts:/app/packages/transition-backend/jestSetup.ts
+      - ${PWD}/packages/transition-backend/package.json:/app/packages/transition-backend/package.json
+      - ${PWD}/packages/transition-backend/tsconfig.json:/app/packages/transition-backend/tsconfig.json
+
+      - ${PWD}/packages/transition-common/src:/app/packages/transition-common/src
+      - ${PWD}/packages/transition-common/.eslintignore:/app/packages/transition-common/.eslintignore
+      - ${PWD}/packages/transition-common/.eslintrc.json:/app/packages/transition-common/.eslintrc.json
+      - ${PWD}/packages/transition-common/.prettierignore:/app/packages/transition-common/.prettierignore
+      - ${PWD}/packages/transition-common/.prettierrc.js:/app/packages/transition-common/.prettierrc.js
+      - ${PWD}/packages/transition-common/jest.config.js:/app/packages/transition-common/jest.config.js
+      - ${PWD}/packages/transition-common/jestSetup.ts:/app/packages/transition-common/jestSetup.ts
+      - ${PWD}/packages/transition-common/package.json:/app/packages/transition-common/package.json
+      - ${PWD}/packages/transition-common/tsconfig.json:/app/packages/transition-common/tsconfig.json
+            
+      - ${PWD}/packages/transition-frontend/src:/app/packages/transition-frontend/src
+      - ${PWD}/packages/transition-frontend/.eslintignore:/app/packages/transition-frontend/.eslintignore
+      - ${PWD}/packages/transition-frontend/.eslintrc.json:/app/packages/transition-frontend/.eslintrc.json
+      - ${PWD}/packages/transition-frontend/.prettierignore:/app/packages/transition-frontend/.prettierignore
+      - ${PWD}/packages/transition-frontend/.prettierrc.js:/app/packages/transition-frontend/.prettierrc.js
+      - ${PWD}/packages/transition-frontend/jest.config.js:/app/packages/transition-frontend/jest.config.js
+      - ${PWD}/packages/transition-frontend/package.json:/app/packages/transition-frontend/package.json
+      - ${PWD}/packages/transition-frontend/tsconfig.json:/app/packages/transition-frontend/tsconfig.json
+      - ${PWD}/packages/transition-frontend/webpack.config.js:/app/packages/transition-frontend/webpack.config.js
+
+  postgres:
+    image: postgis/postgis
+    volumes:
+      - transition-postgis-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: pass
+
+volumes:
+  transition-postgis-data:
+  # Holding osrm import data in docker volumes. You can change them to be mount bind
+  # to use a specific location of your local filesystem
+  transition-project-import:
+  transition-project-osrm:
+  # Caching is actually data storage
+  transition-project-cache:

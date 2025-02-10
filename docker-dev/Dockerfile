@@ -1,0 +1,78 @@
+# Transition Docker file
+
+# Build json2capnp
+# the capnp crate does not build on buster or older so we need to use a separate image
+# since node does not provide a buster image.
+# Added benefit of splitting the image
+# We copy the executable later
+FROM debian:bookworm AS json2capnpbuild
+WORKDIR /app/services/json2capnp
+COPY services/json2capnp ./
+RUN apt-get update && apt-get -y --no-install-recommends install cargo ca-certificates
+RUN cargo build
+
+
+# Build Node app
+FROM node:22-bookworm
+WORKDIR /app
+# Install all the json package dependencies in an intermediary image. To do so, we copy each package.json files
+# and run yarn install which will download all the listed packages in the image.
+COPY package.json yarn.lock ./
+COPY ./packages/chaire-lib-backend/package.json ./packages/chaire-lib-backend/package.json
+COPY ./packages/chaire-lib-common/package.json ./packages/chaire-lib-common/package.json
+COPY packages/chaire-lib-frontend packages/chaire-lib-frontend
+COPY packages/transition-common packages/transition-common
+COPY packages/transition-backend packages/transition-backend
+COPY packages/transition-frontend packages/transition-frontend
+# Add a 300 seconds timeout to avoid build failures in docker hub, which seems to be an acceptable workaround (see for example https://github.com/yarnpkg/yarn/issues/5540)
+RUN yarn config set network-timeout 300000
+RUN yarn install
+
+# Copy the rest. (node_modules are excluded in .dockerignore)
+COPY ./packages /app/packages
+COPY ./configs /app/configs
+
+
+# Setup the example as a default configuration for the image
+COPY .env.docker /app/.env
+
+#TODO evaluate if any of those commands are necessary
+#RUN yarn setup
+#RUN yarn setup && yarn migrate && yarn create-user
+#RUN yarn compile && yarn build:dev
+#RUN yarn compile
+#RUN yarn compile && yarn build:prod
+
+#TODO We probably need to do something different for the projects configuration directories
+# the docker-compose file have an example of using volume for part of a project
+
+# Copy in json2capnp
+COPY --from=json2capnpbuild /app/services/json2capnp/target/debug/json2capnp services/json2capnp/
+
+# Copy in trRouting and osrm binaries
+# For trRouting
+RUN apt-get update && apt-get -y --no-install-recommends install capnproto libboost-regex1.74.0 libboost-filesystem1.74.0 libboost-iostreams1.74.0 libboost-thread1.74.0 libboost-date-time1.74.0 libboost-serialization1.74.0 libboost-program-options1.74.0 libspdlog1.10
+
+# For OSRM
+# libtbb12 us only available in bookworm or later copy it from the osrm image
+COPY --from=greenscientist/osrm-backend:bullseye /usr/local/lib/libtbb* /usr/local/lib/
+RUN apt-get -y --no-install-recommends install libboost-chrono1.74.0 liblua5.4-0
+COPY --from=chairemobilite/trrouting:latest /usr/local/bin/trRouting /usr/local/bin/
+COPY --from=greenscientist/osrm-backend:bullseye /usr/local/bin/osrm-* /usr/local/bin/
+
+#From OSRM dockerfile, make sure tools work
+RUN /usr/local/bin/osrm-extract --help && \
+    /usr/local/bin/osrm-routed --help && \
+    /usr/local/bin/osrm-contract --help && \
+    /usr/local/bin/osrm-partition --help && \
+    /usr/local/bin/osrm-customize --help
+
+# Start json2capnp -> Relies on manually creating cache directory before
+# Start Node app
+
+RUN yarn compile
+COPY . /app
+RUN chmod +x docker-dev/entrypoint-dev.sh
+RUN chmod +x services/json2capnp
+CMD ["/app/docker-dev/entrypoint-dev.sh"]
+EXPOSE 8080
