@@ -73,8 +73,6 @@ export type ProjectConfiguration<AdditionalConfig> = {
                    */
                   tokenFormat: RegExp;
               };
-        google?: boolean;
-        facebook?: boolean;
     };
     separateAdminLoginPage: boolean;
     // @deprecated
