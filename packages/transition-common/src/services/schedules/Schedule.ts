@@ -66,12 +66,36 @@ interface BusUnit {
     id: number;
     totalCapacity: number;
     seatedCapacity: number;
-    currentLocation: 'origin' | 'destination' | 'in_transit';
-    expectedArrivalTime: number; // Quand le bus arrivera à destination
-    expectedReturnTime: number | null; // Quand le bus sera de retour au point de départ
-    direction: 'outbound' | 'inbound' | null;
+    currentLocation: BusLocation;
+    expectedArrivalTime: number;
+    expectedReturnTime: number | null;
+    direction: BusDirection | null;
     lastTripEndTime: number | null;
+    timeInCycle: number;
 }
+
+interface ScheduleDefaults {
+    RETURN_INTERVAL_SECONDS: number;
+    DEFAULT_TOTAL_CAPACITY: number;
+    DEFAULT_SEATED_CAPACITY: number;
+}
+
+enum BusLocation {
+    ORIGIN = 'origin',
+    DESTINATION = 'destination',
+    IN_TRANSIT = 'in_transit'
+}
+
+enum BusDirection {
+    OUTBOUND = 'outbound',
+    INBOUND = 'inbound'
+}
+
+const SCHEDULE_DEFAULTS: ScheduleDefaults = {
+    RETURN_INTERVAL_SECONDS: 720,
+    DEFAULT_TOTAL_CAPACITY: 50,
+    DEFAULT_SEATED_CAPACITY: 20
+};
 
 class Schedule extends ObjectWithHistory<ScheduleAttributes> implements Saveable {
     protected static displayName = 'Schedule';
@@ -199,56 +223,36 @@ class Schedule extends ObjectWithHistory<ScheduleAttributes> implements Saveable
 
     private updateBusAvailability(unit: BusUnit, currentTimeSeconds: number): void {
         if (unit.expectedArrivalTime <= currentTimeSeconds) {
-            if (unit.direction === 'outbound') {
-                unit.currentLocation = 'destination';
+            if (unit.direction === BusDirection.OUTBOUND) {
+                unit.currentLocation = BusLocation.DESTINATION;
                 unit.direction = null;
                 unit.lastTripEndTime = currentTimeSeconds;
-            } else if (unit.direction === 'inbound') {
-                unit.currentLocation = 'origin';
+            } else if (unit.direction === BusDirection.INBOUND) {
+                unit.currentLocation = BusLocation.ORIGIN;
                 unit.direction = null;
                 unit.lastTripEndTime = currentTimeSeconds;
             }
         }
-
-        console.log(
-            `🚌 Bus ${unit.id} - Position: ${unit.currentLocation}, Direction: ${unit.direction}, Arrivée prévue: ${new Date(unit.expectedArrivalTime * 1000).toISOString().substr(11, 8)}`
-        );
     }
+
     // TODO Type the directions somewhere
-    private getNextAvailableUnit(
-        units: BusUnit[],
-        direction: 'outbound' | 'inbound',
-        timeSeconds: number,
-        tripDuration: number
-    ): BusUnit | null {
-        // Filtrer les bus disponibles selon leur position et direction
-        const availableBuses = units.filter((unit) => {
-            if (direction === 'outbound') {
-                return unit.currentLocation === 'origin' && unit.direction === null;
-            } else {
-                return unit.currentLocation === 'destination' && unit.direction === null;
-            }
-        });
-
-        // Trier par dernier temps d'utilisation
-        availableBuses.sort((a, b) => {
-            // Gérer les null comme "toujours disponibles" en les plaçant en fin de liste
-            const aTime = a.lastTripEndTime ?? Infinity;
-            const bTime = b.lastTripEndTime ?? Infinity;
-            return aTime - bTime; // Tri ASC pour prioriser les bus disponibles le plus tôt
-        });
-
-        if (availableBuses.length > 0) {
-            const selectedBus = availableBuses[0];
-            selectedBus.direction = direction;
-            selectedBus.currentLocation = 'in_transit';
-            selectedBus.expectedArrivalTime = timeSeconds + tripDuration;
-
-            return selectedBus;
+    private getNextAvailableUnit(units: any[], direction: any, timeSeconds: number, numberOfUnits?: number) {
+        if (numberOfUnits === undefined) {
+            numberOfUnits = units.length;
         }
-
+        for (let i = 0; i < numberOfUnits; i++) {
+            const unit = units[i];
+            if (
+                (unit.isReadyDirection === direction || unit.isReadyDirection === null) &&
+                unit.isReadyAtTimeSeconds <= timeSeconds
+            ) {
+                unit.isReadyDirection = direction;
+                return unit;
+            }
+        }
         return null;
     }
+
     static getPeriodsGroupsChoices(periodsGroups, language) {
         const periodsGroupChoices: any[] = [];
         for (const periodsGroupShortname in periodsGroups) {
@@ -275,97 +279,64 @@ class Schedule extends ObjectWithHistory<ScheduleAttributes> implements Saveable
         }
         return periodsChoices;
     }
-    private findBestBus(currentTime: number, direction: 'outbound' | 'inbound', units: BusUnit[]): BusUnit | null {
-        // Séparer les bus en deux catégories : déjà en service et nouveaux
+
+    private findBestBus(
+        currentTime: number,
+        direction: BusDirection.OUTBOUND | BusDirection.INBOUND,
+        units: BusUnit[]
+    ): BusUnit | null {
         const availableBuses = units.filter((unit) => {
             const correctLocation =
-                direction === 'outbound' ? unit.currentLocation === 'origin' : unit.currentLocation === 'destination';
+                direction === BusDirection.OUTBOUND
+                    ? unit.currentLocation === BusLocation.ORIGIN
+                    : unit.currentLocation === BusLocation.DESTINATION;
             const isAvailable = unit.direction === null;
             const isReady = unit.lastTripEndTime === null || currentTime >= unit.lastTripEndTime;
             return correctLocation && isAvailable && isReady;
         });
 
-        // Séparer les bus en "déjà utilisés" et "jamais utilisés"
         const usedBuses = availableBuses.filter((bus) => bus.lastTripEndTime !== null);
         const unusedBuses = availableBuses.filter((bus) => bus.lastTripEndTime === null);
 
-        // D'abord, essayer de trouver un bus déjà utilisé
         if (usedBuses.length > 0) {
-            // Trier par dernier temps d'utilisation pour prendre le bus qui a fini le plus tôt
             return usedBuses.sort((a, b) => (a.lastTripEndTime || 0) - (b.lastTripEndTime || 0))[0];
         }
 
-        // Si aucun bus déjà utilisé n'est disponible, prendre un nouveau bus
         return unusedBuses[0] || null;
     }
 
-    private processOutboundDeparture(
+    private processDeparture(
         currentTime: number,
-        outboundTotalTimeSeconds: number,
+        totalTimeSeconds: number,
         units: BusUnit[],
-        outboundPath: TransitPath,
-        trips: any[]
+        path: TransitPath,
+        trips: any[],
+        direction: BusDirection
     ) {
-        const bus = this.findBestBus(currentTime, 'outbound', units);
+        const bus = this.findBestBus(currentTime, direction, units);
         if (bus) {
             const trip = this.generateTrip(
                 currentTime,
                 bus,
-                outboundPath,
-                outboundPath.getAttributes().data.segments,
-                outboundPath.getAttributes().nodes,
-                outboundPath.getData('dwellTimeSeconds')
+                path,
+                path.getAttributes().data.segments,
+                path.getAttributes().nodes,
+                path.getData('dwellTimeSeconds')
             );
             trips.push(trip);
-            bus.direction = 'outbound';
-            bus.currentLocation = 'in_transit';
-            bus.expectedArrivalTime = currentTime + outboundTotalTimeSeconds;
-            console.log(
-                `🚍 [ALLER] Bus ${bus.id} - Départ: ${new Date(currentTime * 1000).toISOString().substr(11, 8)}`
-            );
-        } else {
-            console.log(
-                `⚠️ Pas de bus disponible pour le départ ALLER de ${new Date(currentTime * 1000).toISOString().substr(11, 8)}`
-            );
+            bus.direction = direction;
+            bus.currentLocation = BusLocation.IN_TRANSIT;
+            bus.expectedArrivalTime = currentTime + totalTimeSeconds;
+            return { busId: bus.id };
         }
-    }
-
-    private processInboundDeparture(
-        currentTime: number,
-        inboundTotalTimeSeconds: number,
-        units: BusUnit[],
-        inboundPath: TransitPath,
-        trips: any[]
-    ) {
-        const bus = this.findBestBus(currentTime, 'inbound', units);
-        if (bus) {
-            const trip = this.generateTrip(
-                currentTime,
-                bus,
-                inboundPath,
-                inboundPath.getAttributes().data.segments,
-                inboundPath.getAttributes().nodes,
-                inboundPath.getData('dwellTimeSeconds')
-            );
-            trips.push(trip);
-            bus.direction = 'inbound';
-            bus.currentLocation = 'in_transit';
-            bus.expectedArrivalTime = currentTime + inboundTotalTimeSeconds;
-            console.log(
-                `🚍 [RETOUR] Bus ${bus.id} - Départ: ${new Date(currentTime * 1000).toISOString().substr(11, 8)}`
-            );
-        } else {
-            console.log(
-                `⚠️ Pas de bus disponible pour le départ RETOUR de ${new Date(currentTime * 1000).toISOString().substr(11, 8)}`
-            );
-        }
+        return { busId: null };
     }
 
     private generateTrips(
         startAtSecondsSinceMidnight: number,
         endAtSecondsSinceMidnight: number,
-        outboundIntervalSeconds: number | null,
-        inboundIntervalSeconds: number | null,
+        outboundIntervalSeconds: number,
+        inboundIntervalSeconds: number,
         outboundTotalTimeSeconds: number,
         inboundTotalTimeSeconds: number,
         units: BusUnit[],
@@ -378,20 +349,12 @@ class Schedule extends ObjectWithHistory<ScheduleAttributes> implements Saveable
         const inboundDepartures: number[] = [];
         const usedBusIds = new Set<number>();
 
-        console.log(
-            `🔄 Temps de cycle (aller + retour) : ${outboundTotalTimeSeconds + inboundTotalTimeSeconds} secondes`
-        );
-
         if (outboundIntervalSeconds !== null && inboundIntervalSeconds !== null && inboundIntervalSeconds !== 0) {
-            // Déterminer la position initiale des bus en fonction des intervalles
             const startFromDestination = inboundIntervalSeconds < outboundIntervalSeconds;
-            console.log(
-                `🚌 Démarrage depuis ${startFromDestination ? 'destination' : 'origine'} (intervalle aller: ${outboundIntervalSeconds}s, retour: ${inboundIntervalSeconds}s)`
-            );
 
-            // Initialiser les bus à leur position de départ
+            // Initialise tous les bus avec leurs positions de départ et réinitialise leurs états
             units.forEach((unit) => {
-                unit.currentLocation = startFromDestination ? 'destination' : 'origin';
+                unit.currentLocation = startFromDestination ? BusLocation.DESTINATION : BusLocation.ORIGIN;
                 unit.direction = null;
                 unit.expectedArrivalTime = startAtSecondsSinceMidnight;
                 unit.expectedReturnTime = null;
@@ -400,27 +363,26 @@ class Schedule extends ObjectWithHistory<ScheduleAttributes> implements Saveable
 
             let time = startAtSecondsSinceMidnight;
 
+            // Génère les horaires de départ en fonction de la direction choisie
             if (startFromDestination) {
-                // Si on démarre de la destination, commencer par les départs retour
+                // Commence par les trajets retour si on commence de la destination
                 inboundDepartures.push(time);
                 while ((time += inboundIntervalSeconds) < endAtSecondsSinceMidnight) {
                     inboundDepartures.push(time);
                 }
-
-                // Les départs aller commencent après le premier trajet retour
+                // Calcule les départs aller, décalés du temps de trajet retour
                 time = startAtSecondsSinceMidnight + inboundTotalTimeSeconds;
                 outboundDepartures.push(time);
                 while ((time += outboundIntervalSeconds) < endAtSecondsSinceMidnight) {
                     outboundDepartures.push(time);
                 }
             } else {
-                // Si on démarre de l'origine (cas par défaut), commencer par les départs aller
+                // Commence par les trajets aller si on part de l'origine
                 outboundDepartures.push(time);
                 while ((time += outboundIntervalSeconds) < endAtSecondsSinceMidnight) {
                     outboundDepartures.push(time);
                 }
-
-                // Les départs retour commencent après le premier trajet aller
+                // Calcule les départs retour, décalés du temps de trajet aller
                 time = startAtSecondsSinceMidnight + outboundTotalTimeSeconds;
                 inboundDepartures.push(time);
                 while ((time += inboundIntervalSeconds) < endAtSecondsSinceMidnight) {
@@ -428,98 +390,120 @@ class Schedule extends ObjectWithHistory<ScheduleAttributes> implements Saveable
                 }
             }
 
-            console.log(
-                `📊 Premier départ aller prévu à: ${new Date(outboundDepartures[0] * 1000).toISOString().substr(11, 8)}`
-            );
-            console.log(
-                `📊 Premier départ retour prévu à: ${new Date(inboundDepartures[0] * 1000).toISOString().substr(11, 8)}`
-            );
-
-            // Le reste du code reste identique
+            // Traite tous les départs chronologiquement jusqu'à ce que les deux directions soient complètes
             while (outboundDepartures.length > 0 || inboundDepartures.length > 0) {
+                // Trouve le prochain horaire de départ (aller ou retour)
                 const nextOutbound = outboundDepartures[0] || Infinity;
                 const nextInbound = inboundDepartures[0] || Infinity;
                 const currentTime = Math.min(nextOutbound, nextInbound);
 
                 units.forEach((unit) => this.updateBusAvailability(unit, currentTime));
 
+                // Gère les départs simultanés dans les deux directions
                 if (nextOutbound === currentTime && nextInbound === currentTime) {
                     outboundDepartures.shift();
-                    this.processOutboundDeparture(currentTime, outboundTotalTimeSeconds, units, outboundPath, trips);
+                    const result = this.processDeparture(
+                        currentTime,
+                        outboundTotalTimeSeconds,
+                        units,
+                        outboundPath,
+                        trips,
+                        BusDirection.OUTBOUND
+                    );
+                    if (result.busId) usedBusIds.add(result.busId);
                 } else {
+                    // Gère les départs individuels dans chaque direction
                     if (currentTime === nextOutbound) {
                         outboundDepartures.shift();
-                        this.processOutboundDeparture(
+                        const result = this.processDeparture(
                             currentTime,
                             outboundTotalTimeSeconds,
                             units,
                             outboundPath,
-                            trips
+                            trips,
+                            BusDirection.OUTBOUND
                         );
+                        if (result.busId) usedBusIds.add(result.busId);
                     }
                     if (currentTime === nextInbound && inboundPath) {
                         inboundDepartures.shift();
-                        this.processInboundDeparture(currentTime, inboundTotalTimeSeconds, units, inboundPath, trips);
+                        const result = this.processDeparture(
+                            currentTime,
+                            inboundTotalTimeSeconds,
+                            units,
+                            inboundPath,
+                            trips,
+                            BusDirection.INBOUND
+                        );
+                        if (result.busId) usedBusIds.add(result.busId);
                     }
                 }
             }
+            const realBusCount = usedBusIds.size;
+            return {
+                trips,
+                realBusCount
+            };
         } else {
-            // Gestion du cas où seul le nombre de bus est spécifié
-            console.log(`🚌 Génération des trajets avec nombre de bus spécifié : ${unitsCount} bus`);
+            //Ancienne logique si on precise le nombre de bus
+            const outboundSegments = outboundPath.getAttributes().data.segments;
+            const outboundNodes = outboundPath.getAttributes().nodes;
+            const outboundDwellTimes = outboundPath.getData('dwellTimeSeconds');
+
+            const inboundSegments = inboundPath ? inboundPath.getAttributes().data.segments : undefined;
+            const inboundNodes = inboundPath ? inboundPath.getAttributes().nodes : undefined;
+            const inboundDwellTimes = inboundPath ? inboundPath.getAttributes().data.dwellTimeSeconds : undefined;
             const cycleTimeSeconds = outboundTotalTimeSeconds + inboundTotalTimeSeconds;
 
             // Pour chaque bus, initialiser le temps dans le cycle
             for (let i = 0; i < unitsCount; i++) {
                 const unit = units[i];
-                const timeInCycle = Math.ceil((i * cycleTimeSeconds) / unitsCount);
-                unit.expectedArrivalTime = startAtSecondsSinceMidnight + timeInCycle;
-                console.log(`🚍 Bus ID ${unit.id} initialisé avec un temps de cycle de ${timeInCycle} secondes`);
+                unit.timeInCycle = Math.ceil((i * cycleTimeSeconds) / unitsCount);
             }
-
-            // Génération des trajets basée sur le temps de cycle
             for (let timeSoFar = startAtSecondsSinceMidnight; timeSoFar < endAtSecondsSinceMidnight; timeSoFar++) {
-                units.forEach((unit) => {
-                    this.updateBusAvailability(unit, timeSoFar);
-
-                    if (unit.currentLocation === 'origin' && unit.direction === null) {
-                        // Générer un trajet aller
-                        const trip = this.generateTrip(
-                            timeSoFar,
-                            unit,
-                            outboundPath,
-                            outboundPath.getAttributes().data.segments,
-                            outboundPath.getAttributes().nodes,
-                            outboundPath.getData('dwellTimeSeconds')
-                        );
-                        trips.push(trip);
-                        unit.direction = 'outbound';
-                        unit.expectedArrivalTime = timeSoFar + outboundTotalTimeSeconds;
-                    } else if (inboundPath && unit.currentLocation === 'destination' && unit.direction === null) {
-                        // Générer un trajet retour
-                        const trip = this.generateTrip(
-                            timeSoFar,
-                            unit,
-                            inboundPath,
-                            inboundPath.getAttributes().data.segments || undefined,
-                            inboundPath.getAttributes().nodes as string[],
-                            inboundPath.getAttributes().data.dwellTimeSeconds || undefined
-                        );
-                        trips.push(trip);
-                        unit.direction = 'inbound';
-                        unit.expectedArrivalTime = timeSoFar + inboundTotalTimeSeconds;
-                        unit.expectedReturnTime = timeSoFar + inboundTotalTimeSeconds;
+                // Handle the current time
+                for (let i = 0; i < unitsCount; i++) {
+                    // Verify if unit cycle needs to be reinitialized
+                    const unit = units[i];
+                    if (unit.timeInCycle >= cycleTimeSeconds) {
+                        if ((timeSoFar - startAtSecondsSinceMidnight) % outboundIntervalSeconds === 0) {
+                            unit.timeInCycle = 0;
+                        }
                     }
-                });
-            }
-        }
 
-        trips.forEach((trip) => {
-            if (trip.unit_id) {
-                usedBusIds.add(trip.unit_id);
+                    // Handle current unit
+                    if (unit.timeInCycle === 0) {
+                        trips.push(
+                            this.generateTrip(
+                                timeSoFar,
+                                unit,
+                                outboundPath,
+                                outboundSegments,
+                                outboundNodes,
+                                outboundDwellTimes
+                            )
+                        );
+                    } else if (inboundPath && unit.timeInCycle === outboundTotalTimeSeconds) {
+                        // FIXME The number of units is not necessarily a rounded number, so there may be more frequent return trips at the beginning of the period until it stabilizes
+                        trips.push(
+                            this.generateTrip(
+                                timeSoFar,
+                                unit,
+                                inboundPath,
+                                inboundSegments,
+                                inboundNodes as string[],
+                                inboundDwellTimes
+                            )
+                        );
+                    }
+                    unit.timeInCycle++;
+                }
             }
-        });
-        console.log(`🚍 Nombre réel de bus utilisés: ${usedBusIds.size}`);
-        return trips;
+            return {
+                trips,
+                realBusCount: units.length
+            };
+        }
     }
 
     tripsCount() {
@@ -586,7 +570,6 @@ class Schedule extends ObjectWithHistory<ScheduleAttributes> implements Saveable
                 total_capacity: unit.totalCapacity,
                 seated_capacity: unit.seatedCapacity,
                 unit_id: unit.id,
-                // Adapter les propriétés pour la nouvelle structure BusUnit
                 unitDirection: unit.direction,
                 unitReadyAt: unit.expectedReturnTime || unit.expectedArrivalTime
             };
@@ -604,25 +587,20 @@ class Schedule extends ObjectWithHistory<ScheduleAttributes> implements Saveable
             return Status.createError(`Period ${periodShortname} does not exist`);
         }
 
-        // 📌 Récupération des intervalles (aller et retour) et du nombre de bus
         const outboundIntervalSeconds = period.interval_seconds;
         let inboundIntervalSeconds = period.inbound_interval_seconds ?? DEFAULT_RETURN_INTERVAL_SECONDS;
         const numberOfUnits = period.number_of_units;
 
         if (!this._collectionManager.get('lines') || !this._collectionManager.get('paths')) {
-            console.log('❌ Erreur: Collections de lignes et/ou de trajets manquantes');
             return Status.createError('missing lines and/or paths collections');
         }
 
         if ((_isBlank(outboundIntervalSeconds) || _isBlank(inboundIntervalSeconds)) && _isBlank(numberOfUnits)) {
-            console.log('❌ Erreur: Aucun intervalle ou nombre d’unités spécifié');
             return Status.createError('missing intervals or number of units');
         }
 
-        // 📌 Récupération des chemins
         const outboundPathId = period.outbound_path_id;
         if (_isBlank(outboundPathId)) {
-            console.log('❌ Erreur: ID du trajet aller manquant');
             return Status.createError('missing outbound path id');
         }
 
@@ -641,7 +619,6 @@ class Schedule extends ObjectWithHistory<ScheduleAttributes> implements Saveable
             )
             : undefined;
 
-        // 📌 Définition des heures de début et de fin
         const customStartAtStr = period.custom_start_at_str;
         const startAtSecondsSinceMidnight = customStartAtStr
             ? (timeStrToSecondsSinceMidnight(customStartAtStr) as number)
@@ -652,7 +629,6 @@ class Schedule extends ObjectWithHistory<ScheduleAttributes> implements Saveable
             ? (timeStrToSecondsSinceMidnight(customEndAtStr) as number)
             : period.end_at_hour * 3600;
 
-        // 📌 Calcul des durées des trajets (aller et retour)
         const outboundTotalTimeSeconds = outboundPath.getAttributes().data.operatingTimeWithLayoverTimeSeconds || 0;
         const inboundTotalTimeSeconds = inboundPath
             ? inboundPath.getAttributes().data.operatingTimeWithLayoverTimeSeconds || 0
@@ -660,76 +636,51 @@ class Schedule extends ObjectWithHistory<ScheduleAttributes> implements Saveable
 
         const cycleTimeSeconds = outboundTotalTimeSeconds + inboundTotalTimeSeconds;
 
-        // 📌 Calcul du nombre optimal de bus requis
         let tripsIntervalSeconds: number | null = null;
         let tripsNumberOfUnits: number | null = null;
         let totalPeriod = -1;
 
-        // Supprimer les valeurs précédentes
         delete period.calculated_interval_seconds;
         delete period.calculated_number_of_units;
 
         if (_isNumber(numberOfUnits)) {
             inboundIntervalSeconds = 0;
-            // 📌 Ancien comportement : l'utilisateur spécifie le nombre de bus
             tripsNumberOfUnits = numberOfUnits;
             tripsIntervalSeconds = Math.ceil(cycleTimeSeconds / numberOfUnits);
 
-            // Si les horaires ne sont pas basés sur les secondes, arrondir à la minute supérieure
             if (this.get('allow_seconds_based_schedules') !== true) {
                 tripsIntervalSeconds = Math.ceil(tripsIntervalSeconds / 60) * 60;
             }
 
-            // Assigner l'intervalle calculé à period.calculated_interval_seconds
             period.calculated_interval_seconds = tripsIntervalSeconds;
             period.calculated_number_of_units = numberOfUnits;
-
-            console.log(`📊 Intervalle calculé : ${tripsIntervalSeconds} secondes`);
         } else if (_isNumber(outboundIntervalSeconds) && _isNumber(inboundIntervalSeconds)) {
             totalPeriod = endAtSecondsSinceMidnight - startAtSecondsSinceMidnight;
 
-            // Calcul des unités nécessaires pour l'aller et le retour (en flottant)
             const outboundUnitsFloat = totalPeriod / outboundIntervalSeconds;
             const inboundUnitsFloat = totalPeriod / inboundIntervalSeconds;
 
-            // Nombre de bus requis (entier)
             const outboundUnits = Math.ceil(outboundUnitsFloat);
             const inboundUnits = Math.ceil(inboundUnitsFloat);
             tripsNumberOfUnits = Math.max(outboundUnits, inboundUnits);
-
-            // Assigner la valeur flottante à period.calculated_number_of_units
-            period.calculated_number_of_units = Math.max(outboundUnitsFloat, inboundUnitsFloat);
-
-            // Affichage des détails du calcul
-            console.log('📊 Détails du calcul des unités nécessaires :');
-            console.log(`🔹 Temps total de la période : ${totalPeriod} secondes`);
-            console.log(`🔹 Intervalle ALLER : ${outboundIntervalSeconds} secondes`);
-            console.log(`🔹 Intervalle RETOUR : ${inboundIntervalSeconds} secondes`);
-            console.log(`🚍 Unités nécessaires pour l'ALLER (float) : ${outboundUnitsFloat}`);
-            console.log(`🚍 Unités nécessaires pour le RETOUR (float) : ${inboundUnitsFloat}`);
-            console.log(`✅ Nombre total de bus alloués (entier) : ${tripsNumberOfUnits}`);
-            console.log(`📊 Nombre de bus calculé (float) : ${period.calculated_number_of_units}`);
         }
 
         if (tripsNumberOfUnits === null) {
             return Status.createOk([]);
         }
-
-        console.log(`🚍 Bus nécessaires (TOTAL) : ${tripsNumberOfUnits}`);
-
-        // 📌 Création des unités de bus
         const units: BusUnit[] = Array.from({ length: tripsNumberOfUnits }, (_, i) => ({
             id: i + 1,
-            totalCapacity: 50,
-            seatedCapacity: 20,
-            currentLocation: 'origin',
+            totalCapacity: SCHEDULE_DEFAULTS.DEFAULT_TOTAL_CAPACITY,
+            seatedCapacity: SCHEDULE_DEFAULTS.DEFAULT_SEATED_CAPACITY,
+            currentLocation: BusLocation.ORIGIN,
             expectedArrivalTime: startAtSecondsSinceMidnight,
             expectedReturnTime: null,
             direction: null,
-            lastTripEndTime: null
+            lastTripEndTime: null,
+            timeInCycle: 0
         }));
-        // 📌 Génération des trajets en respectant les intervalles
-        const trips = this.generateTrips(
+
+        const result = this.generateTrips(
             startAtSecondsSinceMidnight,
             endAtSecondsSinceMidnight,
             tripsIntervalSeconds ?? outboundIntervalSeconds!, // Utiliser l'intervalle calculé ou celui spécifié
@@ -741,10 +692,10 @@ class Schedule extends ObjectWithHistory<ScheduleAttributes> implements Saveable
             inboundPath
         );
 
-        period.trips = trips;
+        period.trips = result.trips;
+        period.calculated_number_of_units = result.realBusCount;
 
-        console.log(`✅ Nombre total de trajets générés: ${trips.length}`);
-        return Status.createOk(trips);
+        return Status.createOk(result.trips);
     }
 
     updateForAllPeriods() {
