@@ -68,10 +68,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ headerText, buttonText }) => {
     };
 
     const handleKeyUp = (e: React.KeyboardEvent) => {
-        // Submit form on enter or space keys
-        // FIXME Remove deprecated `which` property
-        if (e.key === 'Enter' || e.key === ' ' || e.which === 13 || e.which === 32) {
-            handleSubmit();
+        // Submit form on 'Enter' or 'space' keys inside the email input
+        if (e.key === 'Enter' || e.key === ' ') {
+            submitButtonRef.current?.click();
         }
     };
 
@@ -106,16 +105,17 @@ const LoginPage: React.FC<LoginPageProps> = ({ headerText, buttonText }) => {
                         className="apptr__form-input apptr__form-input-string apptr__input apptr__input-string"
                         value={formState.email}
                         onChange={handleEmailChange}
+                        onKeyUp={handleKeyUp}
                     />
                 </div>
             </div>
 
             <Button
+                type="submit"
                 isVisible={true}
                 onClick={handleSubmit}
                 inputRef={submitButtonRef as React.RefObject<HTMLButtonElement>}
                 label={!_isBlank(buttonText) ? buttonText : t('auth:Login')}
-                onKeyUp={handleKeyUp}
             />
         </form>
     );
