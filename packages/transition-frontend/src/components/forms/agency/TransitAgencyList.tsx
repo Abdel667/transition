@@ -18,6 +18,8 @@ import AgencyCollection from 'transition-common/lib/services/agency/AgencyCollec
 import TransitAgencyButton from './TransitAgencyButton';
 import ButtonList from '../../parts/ButtonList';
 import DocumentationTooltip from '../../parts/DocumentationTooltip';
+import Schedule from 'transition-common/lib/services/schedules/Schedule';
+
 
 export type AgencyListState = {
     expanded: string[];
@@ -107,6 +109,20 @@ const TransitAgencyList: React.FunctionComponent<AgencyListProps> = (props: Agen
                             />
                         ))}
             </ButtonList>
+
+            {!objectSelected && props.agencyCollection && props.agencyCollection.size() > 0 && (
+                <div className="tr__form-buttons-container">
+                    <Button
+                        color="blue"
+                        icon={faPlus}
+                        iconClass="_icon"
+                        label={props.t('transit:transitSchedule:BatchSchedules')}
+                        onClick={function () {
+                            serviceLocator.eventManager.emit('fullSizePanel.show');
+                        }.bind(this)}
+                    />
+                </div>
+            )}
 
             {!objectSelected && props.agencyCollection && (
                 <div className="tr__form-buttons-container">

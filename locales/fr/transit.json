@@ -191,7 +191,8 @@
         "PeriodsGroup": "Groupe de périodes",
         "PeriodsGroups": "Groupes de périodes",
         "nTrip": "{{n}} voyage",
-        "nTrips": "{{n}} voyages"
+        "nTrips": "{{n}} voyages",
+        "BatchSchedules": "Générer des horaires en lot"
     },
     "transitUnit": {
         "List": "Unités",

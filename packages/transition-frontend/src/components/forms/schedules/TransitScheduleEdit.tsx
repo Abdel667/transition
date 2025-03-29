@@ -49,6 +49,7 @@ interface ScheduleFormProps {
 interface ScheduleFormState extends SaveableObjectState<Schedule> {
     scheduleErrors: string[];
 }
+const batchGeneration = false;
 
 class TransitScheduleEdit extends SaveableObjectForm<Schedule, ScheduleFormProps & WithTranslation, ScheduleFormState> {
     private resetChangesCount = 0;
@@ -76,6 +77,22 @@ class TransitScheduleEdit extends SaveableObjectForm<Schedule, ScheduleFormProps
         return null;
     }
 
+    protected generateSchedulesForPeriod(schedules: Schedule[], periodShortname: string, periodIndex: number) {
+        const processSchedule = (schedule: Schedule) => {
+            const response = schedule.generateForPeriod(periodShortname);
+            if (response.trips) {
+                schedule.set(`periods[${periodIndex}].trips`, response.trips);
+            }
+        };
+        if (batchGeneration) {
+            schedules.forEach(processSchedule);
+        } else {
+            const schedule = schedules[0];
+            processSchedule(schedule);
+            serviceLocator.selectedObjectsManager.setSelection('schedule', [schedule]);
+        }
+    }
+    
     protected async onDelete(e: any): Promise<void> {
         if (e && typeof e.stopPropagation === 'function') {
             e.stopPropagation();
@@ -128,27 +145,29 @@ class TransitScheduleEdit extends SaveableObjectForm<Schedule, ScheduleFormProps
     }
 
     onSave = async () => {
-        const line = this.props.line;
-        const isFrozen = line.isFrozen();
-        const schedule = this.props.schedule;
-        // save
-        if (isFrozen === true) {
-            serviceLocator.selectedObjectsManager.deselect('schedule');
-            return true;
-        }
-        schedule.validate();
-        if (schedule.isValid) {
-            serviceLocator.eventManager.emit('progress', { name: 'SavingSchedule', progress: 0.0 });
-            try {
-                await schedule.save(serviceLocator.socketEventManager);
-                line.updateSchedule(schedule);
-                serviceLocator.selectedObjectsManager.setSelection('line', [line]);
+        if(!batchGeneration){
+            const line = this.props.line;
+            const isFrozen = line.isFrozen();
+            const schedule = this.props.schedule;
+            // save
+            if (isFrozen === true) {
                 serviceLocator.selectedObjectsManager.deselect('schedule');
-            } finally {
-                serviceLocator.eventManager.emit('progress', { name: 'SavingSchedule', progress: 1.0 });
+                return true;
             }
-        } else {
-            serviceLocator.selectedObjectsManager.setSelection('schedule', [schedule]);
+            schedule.validate();
+            if (schedule.isValid) {
+                serviceLocator.eventManager.emit('progress', { name: 'SavingSchedule', progress: 0.0 });
+                try {
+                    await schedule.save(serviceLocator.socketEventManager);
+                    line.updateSchedule(schedule);
+                    serviceLocator.selectedObjectsManager.setSelection('line', [line]);
+                    serviceLocator.selectedObjectsManager.deselect('schedule');
+                } finally {
+                    serviceLocator.eventManager.emit('progress', { name: 'SavingSchedule', progress: 1.0 });
+                }
+            } else {
+                serviceLocator.selectedObjectsManager.setSelection('schedule', [schedule]);
+            }
         }
     };
 
@@ -431,15 +450,7 @@ class TransitScheduleEdit extends SaveableObjectForm<Schedule, ScheduleFormProps
                                                 icon={faSyncAlt}
                                                 iconClass="_icon"
                                                 label={this.props.t('transit:transitSchedule:GenerateSchedule')}
-                                                onClick={function () {
-                                                    const response = schedule.generateForPeriod(periodShortname);
-                                                    if (response.trips) {
-                                                        schedule.set(`periods[${i}].trips`, response.trips);
-                                                    }
-                                                    serviceLocator.selectedObjectsManager.setSelection('schedule', [
-                                                        schedule
-                                                    ]);
-                                                }}
+                                                onClick={() => this.generateSchedulesForPeriod([schedule], periodShortname, i)}
                                             />
                                         )}
                                     </div>

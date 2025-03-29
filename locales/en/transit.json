@@ -191,7 +191,8 @@
         "PeriodsGroup": "Periods group",
         "PeriodsGroups": "Periods groups",
         "nTrip": "{{n}} trip",
-        "nTrips": "{{n}} trips"
+        "nTrips": "{{n}} trips",
+        "BatchSchedules": "Generate schedules in batch"
     },
     "transitUnit": {
         "List": "Units",
