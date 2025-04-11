@@ -17,7 +17,7 @@ import { MapUpdateLayerEventType } from 'chaire-lib-frontend/lib/services/map/ev
 
 interface ScheduleBatchButtonProps extends WithTranslation {
     line: Line;
-    selectedLines?: Line;
+    selectedLines?: Line[];
     onObjectSelected?: (objectId: string) => void;
 }
 
@@ -92,7 +92,7 @@ const TransitScheduleBatchButton: React.FunctionComponent<ScheduleBatchButtonPro
             <InputCheckboxBoolean
                 id={`transitBatchLineSelect${lineId}`}
                 label=" "
-                value={lineIsSelected} 
+                value={lineIsSelected}
                 disabled={isFrozen}
                 sameLine={true}
                 choices={[
