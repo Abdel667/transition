@@ -11,7 +11,7 @@ import serviceLocator from 'chaire-lib-common/lib/utils/ServiceLocator';
 import Line from 'transition-common/lib/services/line/Line';
 import Button from '../../parts/Button';
 import ButtonCell from '../../parts/ButtonCell';
-import InputCheckboxBoolean from 'chaire-lib-frontend/lib/components/input/InputCheckbox';
+import InputCheckbox from 'chaire-lib-frontend/lib/components/input/InputCheckbox';
 import { EventManager } from 'chaire-lib-common/lib/services/events/EventManager';
 import { MapUpdateLayerEventType } from 'chaire-lib-frontend/lib/services/map/events/MapEventsCallbacks';
 
@@ -38,6 +38,7 @@ const TransitScheduleBatchButton: React.FunctionComponent<ScheduleBatchButtonPro
     };
 
     const onValueChange = (value) => {
+        console.log(value)
         lineIsSelected = value
     }
 
@@ -89,7 +90,7 @@ const TransitScheduleBatchButton: React.FunctionComponent<ScheduleBatchButtonPro
                     : undefined
             }
         >
-            <InputCheckboxBoolean
+            <InputCheckbox
                 id={`transitBatchLineSelect${lineId}`}
                 label=" "
                 value={lineIsSelected}
@@ -98,6 +99,9 @@ const TransitScheduleBatchButton: React.FunctionComponent<ScheduleBatchButtonPro
                 choices={[
                     {
                         value: false
+                    },
+                    {
+                        value: true
                     }
                 ]}
                 localePrefix="transit:transitSchedule"

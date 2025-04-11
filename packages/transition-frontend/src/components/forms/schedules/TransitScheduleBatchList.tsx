@@ -30,7 +30,7 @@ const TransitScheduleBatchLineSelect: React.FunctionComponent<BatchLineSelectPro
     // const isFrozen = props.selectedLine.isFrozen();
     // props.selectedLine.refreshPaths();
     // const scheduleByServiceId = props.selectedLine.attributes.scheduleByServiceId;
-    const lineCollection = serviceLocator.collectionManager.get('lines').getFeatures();//.sort((lineA, lineB) => lineA.toString().localeCompare(lineB.toString()));
+    const lineCollection = serviceLocator.collectionManager.get('lines').getFeatures().sort((lineA, lineB) => lineA.getAttributes().agency_id.localeCompare(lineB.getAttributes().agency_id));
     // const activeServiceIds: string[] = Object.keys(scheduleByServiceId);
     const transitServices = serviceLocator.collectionManager.get('services');
     
