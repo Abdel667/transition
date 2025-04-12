@@ -31,7 +31,7 @@ const TransitScheduleBatchButton: React.FunctionComponent<ScheduleBatchPathSelec
 
 
     
-    const pathsSelectedLine = state.selectedLine.getPaths().
+    const pathsSelectedLine = state.selectedLine.getPaths()
     
 
         
