@@ -21,9 +21,14 @@ interface ScheduleBatchButtonProps extends WithTranslation {
     onObjectSelected?: (objectId: string) => void;
 }
 
-const TransitScheduleBatchButton: React.FunctionComponent<ScheduleBatchButtonProps> = (props: ScheduleBatchButtonProps) => {
-    let lineIsSelected = (props.selectedLines && props.selectedLines.some((selectedLine) => selectedLine.getId() === props.line.getId())) || false;
-    const lineId = props.line.getId()
+const TransitScheduleBatchButton: React.FunctionComponent<ScheduleBatchButtonProps> = (
+    props: ScheduleBatchButtonProps
+) => {
+    let lineIsSelected =
+        (props.selectedLines &&
+            props.selectedLines.some((selectedLine) => selectedLine.getId() === props.line.getId())) ||
+        false;
+    const lineId = props.line.getId();
     const onSelect: React.MouseEventHandler = async (e: React.MouseEvent) => {
         if (e) {
             e.stopPropagation();
@@ -38,9 +43,9 @@ const TransitScheduleBatchButton: React.FunctionComponent<ScheduleBatchButtonPro
     };
 
     const onValueChange = (value) => {
-        console.log(value)
-        lineIsSelected = value
-    }
+        console.log(value);
+        lineIsSelected = value;
+    };
 
     const onDelete: React.MouseEventHandler = async (e: React.MouseEvent) => {
         if (e) {

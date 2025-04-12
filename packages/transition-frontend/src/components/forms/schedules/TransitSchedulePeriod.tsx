@@ -69,7 +69,8 @@ const TransitSchedulePeriod: React.FC<TransitSchedulePeriodProps> = (props) => {
     const tripsCount = trips.length;
 
     const actualOutboundPathId = schedulePeriod.outbound_path_id;
-    const outboundPathId = actualOutboundPathId || (outboundPathsChoices.length === 1 ? outboundPathsChoices[0].value : '');
+    const outboundPathId =
+        actualOutboundPathId || (outboundPathsChoices.length === 1 ? outboundPathsChoices[0].value : '');
 
     const actualInboundPathId = schedulePeriod.inbound_path_id;
     const inboundPathId = actualInboundPathId || (inboundPathsChoices.length === 1 ? inboundPathsChoices[0].value : '');
@@ -84,21 +85,13 @@ const TransitSchedulePeriod: React.FC<TransitSchedulePeriodProps> = (props) => {
             // outbound trip
             outboundTripsCells.push(
                 <td key={`outboundTrip_${tripI}`}>
-                    {secondsSinceMidnightToTimeStr(
-                        trip.departure_time_seconds,
-                        true,
-                        allowSecondsBasedSchedules
-                    )}
+                    {secondsSinceMidnightToTimeStr(trip.departure_time_seconds, true, allowSecondsBasedSchedules)}
                 </td>
             );
         } else if (inboundPathIds.includes(trip.path_id)) {
             inboundTripsCells.push(
                 <td key={`inboundTrip_${tripI}`}>
-                    {secondsSinceMidnightToTimeStr(
-                        trip.departure_time_seconds,
-                        true,
-                        allowSecondsBasedSchedules
-                    )}
+                    {secondsSinceMidnightToTimeStr(trip.departure_time_seconds, true, allowSecondsBasedSchedules)}
                 </td>
             );
         }
@@ -129,6 +122,9 @@ const TransitSchedulePeriod: React.FC<TransitSchedulePeriodProps> = (props) => {
     /* */
 
     const handleGenerateSchedule = () => {
+        schedule.set(`periods[${periodIndex}].outbound_path_id`, outboundPathId);
+        schedule.set(`periods[${periodIndex}].inbound_path_id`, inboundPathId);
+
         const response = schedule.generateForPeriod(periodShortname);
         if (response.trips) {
             schedule.set(`periods[${periodIndex}].trips`, response.trips);
@@ -239,9 +235,7 @@ const TransitSchedulePeriod: React.FC<TransitSchedulePeriodProps> = (props) => {
                             stringToValue={_toInteger}
                             valueToString={_toString}
                             key={`formFieldTransitScheduleNumberOfUnitsPeriod${periodShortname}${scheduleId}${resetChangesCount}`}
-                            onValueUpdated={(value) =>
-                                onValueChange(`periods[${periodIndex}].number_of_units`, value)
-                            }
+                            onValueUpdated={(value) => onValueChange(`periods[${periodIndex}].number_of_units`, value)}
                         />
                     </div>
                     <p className="_small _oblique">
@@ -280,14 +274,14 @@ const TransitSchedulePeriod: React.FC<TransitSchedulePeriodProps> = (props) => {
                             {!_isBlank(outboundPathId) &&
                                 ((!_isBlank(intervalSeconds) && _isBlank(numberOfUnits)) ||
                                     (!_isBlank(numberOfUnits) && _isBlank(intervalSeconds))) && (
-                                    <Button
-                                        color="blue"
-                                        icon={faSyncAlt}
-                                        iconClass="_icon"
-                                        label={t('transit:transitSchedule:GenerateSchedule')}
-                                        onClick={handleGenerateSchedule}
-                                    />
-                                )}
+                                <Button
+                                    color="blue"
+                                    icon={faSyncAlt}
+                                    iconClass="_icon"
+                                    label={t('transit:transitSchedule:GenerateSchedule')}
+                                    onClick={handleGenerateSchedule}
+                                />
+                            )}
                         </div>
                     )}
                     {isFrozen !== true && tripsCount > 0 && (

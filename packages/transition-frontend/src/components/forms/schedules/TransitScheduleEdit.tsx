@@ -5,21 +5,12 @@
  * License text available at https://opensource.org/licenses/MIT
  */
 import React from 'react';
-import _toString from 'lodash/toString';
 import { withTranslation, WithTranslation } from 'react-i18next';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUndoAlt } from '@fortawesome/free-solid-svg-icons/faUndoAlt';
 import { faRedoAlt } from '@fortawesome/free-solid-svg-icons/faRedoAlt';
-import { faTrash } from '@fortawesome/free-solid-svg-icons/faTrash';
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons/faArrowLeft';
-import { faSyncAlt } from '@fortawesome/free-solid-svg-icons/faSyncAlt';
 import { faTrashAlt } from '@fortawesome/free-solid-svg-icons/faTrashAlt';
 import { faCheckCircle } from '@fortawesome/free-solid-svg-icons/faCheckCircle';
-import { faClock } from '@fortawesome/free-solid-svg-icons/faClock';
-import { faArrowDown } from '@fortawesome/free-solid-svg-icons/faArrowDown';
-
-import InputString from 'chaire-lib-frontend/lib/components/input/InputString';
-import InputStringFormatted from 'chaire-lib-frontend/lib/components/input/InputStringFormatted';
 import InputSelect, { choiceType } from 'chaire-lib-frontend/lib/components/input/InputSelect';
 import InputRadio from 'chaire-lib-frontend/lib/components/input/InputRadio';
 import Button from 'chaire-lib-frontend/lib/components/input/Button';
@@ -27,14 +18,7 @@ import FormErrors from 'chaire-lib-frontend/lib/components/pageParts/FormErrors'
 import Preferences from 'chaire-lib-common/lib/config/Preferences';
 import serviceLocator from 'chaire-lib-common/lib/utils/ServiceLocator';
 import { SaveableObjectForm, SaveableObjectState } from 'chaire-lib-frontend/lib/components/forms/SaveableObjectForm';
-import { _isBlank, _toInteger } from 'chaire-lib-common/lib/utils/LodashExtensions';
-import { roundToDecimals } from 'chaire-lib-common/lib/utils/MathUtils';
-import {
-    decimalHourToTimeStr,
-    secondsSinceMidnightToTimeStr,
-    secondsToMinutes,
-    minutesToSeconds
-} from 'chaire-lib-common/lib/utils/DateTimeUtils';
+import { _isBlank } from 'chaire-lib-common/lib/utils/LodashExtensions';
 import ConfirmModal from 'chaire-lib-frontend/lib/components/modal/ConfirmModal';
 import Schedule from 'transition-common/lib/services/schedules/Schedule';
 import Line from 'transition-common/lib/services/line/Line';

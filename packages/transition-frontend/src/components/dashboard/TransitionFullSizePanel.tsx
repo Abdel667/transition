@@ -16,7 +16,7 @@ import TransitScheduleBatchLineSelect from '../forms/schedules/TransitScheduleBa
 interface TransitionFSPanelState {
     selectedLine?: Line;
     selectedSchedule?: Schedule;
-    selectedScheduleMode: String;
+    selectedScheduleMode: string;
 }
 
 const FullSizePanel: React.FunctionComponent<LayoutSectionProps> = (_props: LayoutSectionProps) => {
@@ -60,14 +60,11 @@ const FullSizePanel: React.FunctionComponent<LayoutSectionProps> = (_props: Layo
     }, []);
 
     return (
-        
         <React.Fragment>
             {state.selectedLine && state.selectedScheduleMode === 'single' && (
                 <TransitSchedulesList selectedSchedule={state.selectedSchedule} selectedLine={state.selectedLine} />
             )}
-            {!state.selectedLine && state.selectedScheduleMode === 'batch' && (
-                <TransitScheduleBatchLineSelect/>
-            )}
+            {!state.selectedLine && state.selectedScheduleMode === 'batch' && <TransitScheduleBatchLineSelect />}
         </React.Fragment>
     );
 };

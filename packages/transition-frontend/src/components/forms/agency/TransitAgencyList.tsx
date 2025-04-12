@@ -140,7 +140,7 @@ const TransitAgencyList: React.FunctionComponent<AgencyListProps> = (props: Agen
                         iconClass="_icon"
                         label={props.t('transit:transitSchedule:BatchSchedules')}
                         onClick={function () {
-                            serviceLocator.selectedObjectsManager.setSelection('scheduleMode', ['batch'])
+                            serviceLocator.selectedObjectsManager.setSelection('scheduleMode', ['batch']);
                             serviceLocator.eventManager.emit('fullSizePanel.show');
                         }.bind(this)}
                     />

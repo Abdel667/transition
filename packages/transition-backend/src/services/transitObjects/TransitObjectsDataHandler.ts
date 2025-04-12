@@ -457,15 +457,15 @@ function createDataHandlers(): Record<string, TransitObjectDataHandler> {
 
     return allDataHandlers;
 }
-async function updateSchedulesBatch(attributes: ScheduleAttributes[]){
+async function updateSchedulesBatch(attributes: ScheduleAttributes[]) {
     try {
         const updatedSchedules = await schedulesDbQueries.batchUpdate(attributes);
-        return { updatedSchedules};
+        return { updatedSchedules };
     } catch (error) {
         console.error(error);
         return TrError.isTrError(error) ? error.export() : { error };
     }
-};
+}
 
 const transitObjectDataHandlers: Record<string, TransitObjectDataHandler> = createDataHandlers();
 export { updateSchedulesBatch };
