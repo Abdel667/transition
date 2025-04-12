@@ -11,66 +11,69 @@ import serviceLocator from 'chaire-lib-common/lib/utils/ServiceLocator';
 import Line from 'transition-common/lib/services/line/Line';
 import Button from '../../parts/Button';
 import ButtonCell from '../../parts/ButtonCell';
-import InputCheckbox from 'chaire-lib-frontend/lib/components/input/InputCheckbox';
+import { InputCheckboxBoolean } from 'chaire-lib-frontend/lib/components/input/InputCheckbox';
 import { EventManager } from 'chaire-lib-common/lib/services/events/EventManager';
 import { MapUpdateLayerEventType } from 'chaire-lib-frontend/lib/services/map/events/MapEventsCallbacks';
 
 interface ScheduleBatchButtonProps extends WithTranslation {
     line: Line;
-    selectedLines?: Line[];
-    onObjectSelected?: (objectId: string) => void;
+    // selectedLines?: Line[];
+    lineIsSelected?: boolean;
+    //onObjectSelected?: (objectId: string) => void;
 }
 
-const TransitScheduleBatchButton: React.FunctionComponent<ScheduleBatchButtonProps> = (
-    props: ScheduleBatchButtonProps
-) => {
-    let lineIsSelected =
-        (props.selectedLines &&
-            props.selectedLines.some((selectedLine) => selectedLine.getId() === props.line.getId())) ||
-        false;
-    const lineId = props.line.getId();
+const TransitScheduleBatchButton: React.FunctionComponent<ScheduleBatchButtonProps> = (props: ScheduleBatchButtonProps) => {
+    //let lineIsSelected = (props.selectedLines && props.selectedLines.some((selectedLine) => selectedLine.getId() === props.line.getId())) || false;
+    
+    const [state, setState] = React.useState<ScheduleBatchButtonProps>({
+        // lineIsSelected: (props.selectedLines && props.selectedLines.some((selectedLine) => selectedLine.getId() === props.line.getId())) || false;
+        lineIsSelected: false
+    });
+
+    const lineId = props.line.getId()
     const onSelect: React.MouseEventHandler = async (e: React.MouseEvent) => {
         if (e) {
             e.stopPropagation();
         }
         await props.line.refreshSchedules(serviceLocator.socketEventManager);
-        props.line.startEditing();
-        if (props.onObjectSelected) {
-            props.onObjectSelected(props.line.getId());
-        }
-
-        serviceLocator.selectedObjectsManager.select('batchLineSelect', [props.line]);
+        //props.line.startEditing();
+        // if (props.onObjectSelected) {
+        //     props.onObjectSelected(props.line.getId());
+        // }
+        onCheckboxChange(!state.lineIsSelected);
+        serviceLocator.selectedObjectsManager.setSelection('batchLineSelect', [props.line]);
     };
 
-    const onValueChange = (value) => {
-        console.log(value);
-        lineIsSelected = value;
-    };
+    const onCheckboxChange = (value) => {
+        setState({lineIsSelected: value})
+    }
 
-    const onDelete: React.MouseEventHandler = async (e: React.MouseEvent) => {
-        if (e) {
-            e.stopPropagation();
-        }
+    console.log(props.line.getAgency().acronym)
 
-        const lineHasPaths = props.line.hasPaths();
+    // const onDelete: React.MouseEventHandler = async (e: React.MouseEvent) => {
+    //     if (e) {
+    //         e.stopPropagation();
+    //     }
 
-        serviceLocator.eventManager.emit('progress', { name: 'DeletingLine', progress: 0.0 });
-        await props.line.delete(serviceLocator.socketEventManager);
-        if (lineIsSelected) {
-            serviceLocator.selectedObjectsManager.deselect('line');
-            if (lineHasPaths) {
-                // reload paths
-                await serviceLocator.collectionManager.get('paths').loadFromServer(serviceLocator.socketEventManager);
-                serviceLocator.collectionManager.refresh('paths');
-                (serviceLocator.eventManager as EventManager).emitEvent<MapUpdateLayerEventType>('map.updateLayer', {
-                    layerName: 'transitPaths',
-                    data: serviceLocator.collectionManager.get('paths').toGeojson()
-                });
-            }
-        }
-        serviceLocator.eventManager.emit('progress', { name: 'DeletingLine', progress: 1.0 });
-        serviceLocator.collectionManager.refresh('lines');
-    };
+    //     const lineHasPaths = props.line.hasPaths();
+
+    //     serviceLocator.eventManager.emit('progress', { name: 'DeletingLine', progress: 0.0 });
+    //     await props.line.delete(serviceLocator.socketEventManager);
+    //     if (state.lineIsSelected) {
+    //         serviceLocator.selectedObjectsManager.deselect('line');
+    //         if (lineHasPaths) {
+    //             // reload paths
+    //             await serviceLocator.collectionManager.get('paths').loadFromServer(serviceLocator.socketEventManager);
+    //             serviceLocator.collectionManager.refresh('paths');
+    //             (serviceLocator.eventManager as EventManager).emitEvent<MapUpdateLayerEventType>('map.updateLayer', {
+    //                 layerName: 'transitPaths',
+    //                 data: serviceLocator.collectionManager.get('paths').toGeojson()
+    //             });
+    //         }
+    //     }
+    //     serviceLocator.eventManager.emit('progress', { name: 'DeletingLine', progress: 1.0 });
+    //     serviceLocator.collectionManager.refresh('lines');
+    // };
 
     const isFrozen = props.line.isFrozen();
     const pathsCount = props.line.paths.length;
@@ -82,38 +85,31 @@ const TransitScheduleBatchButton: React.FunctionComponent<ScheduleBatchButtonPro
     return (
         <Button
             key={props.line.getId()}
-            isSelected={lineIsSelected}
+            isSelected={state.lineIsSelected}
             flushActionButtons={false}
             onSelect={{ handler: onSelect }}
-            onDelete={
-                !isFrozen && !lineIsSelected
-                    ? {
-                        handler: onDelete,
-                        message: props.t('transit:transitLine:ConfirmDelete'),
-                        altText: props.t('transit:transitLine:Delete')
-                    }
-                    : undefined
-            }
         >
-            <InputCheckbox
+            <InputCheckboxBoolean
+                id={`transitBatchLineSelect${lineId}`}
+                label=" "
+                isChecked={state.lineIsSelected}
+                onValueChange={(e) => onCheckboxChange(e.target.value)}
+            //onValueChange={(e) => console.log(e)}
+            />
+            {/* <InputCheckboxBoolean
                 id={`transitBatchLineSelect${lineId}`}
                 label=" "
                 value={lineIsSelected}
-                disabled={isFrozen}
-                sameLine={true}
                 choices={[
                     {
                         value: false
-                    },
-                    {
-                        value: true
                     }
                 ]}
                 localePrefix="transit:transitSchedule"
                 t={props.t}
                 isBoolean={true}
                 onValueChange={(e) => onValueChange({ value: e.target.value })}
-            />
+            /> */}
             {/* <InputCheckboxBoolean
                 id={`formFieldTransitAgencyEditIsFrozen${agencyId}`}
                 label=" "
