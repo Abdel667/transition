@@ -122,7 +122,6 @@ function setupObjectSocketRoutes(socket: EventEmitter) {
             );
         }
     }
-
     // Update multiple schedules
     socket.on('transitSchedule.updateBatch', async (schedules, callback) => {
         const response = await updateSchedulesBatch(schedules);
