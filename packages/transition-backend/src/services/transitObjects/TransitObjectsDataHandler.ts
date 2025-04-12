@@ -457,13 +457,13 @@ function createDataHandlers(): Record<string, TransitObjectDataHandler> {
 
     return allDataHandlers;
 }
-async function updateSchedulesBatch(attributes: ScheduleAttributes[]) {
+async function updateSchedulesBatch(attributes: ScheduleAttributes[] ): Promise<Status.Status<number[]>> {
     try {
         const updatedSchedules = await schedulesDbQueries.batchUpdate(attributes);
-        return { updatedSchedules };
+        return Status.createOk(updatedSchedules);
     } catch (error) {
         console.error(error);
-        return TrError.isTrError(error) ? error.export() : { error };
+        return Status.createError(TrError.isTrError(error) ? error.message : 'Error updating schedules');
     }
 }
 
