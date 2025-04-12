@@ -402,10 +402,7 @@ const save = async function (scheduleData: ScheduleAttributes, options: { transa
         : await createFromScheduleData(scheduleData, options);
 };
 
-const saveAll = async function (
-    schedulesData: ScheduleAttributes[], 
-    options: { transaction?: Knex.Transaction } = {}
-) {
+const saveAll = async function (schedulesData: ScheduleAttributes[], options: { transaction?: Knex.Transaction } = {}) {
     return await Promise.all(schedulesData.map((scheduleData) => save(scheduleData, options)));
 };
 // Private function to get the period ids for a given schedule, select within
