@@ -21,17 +21,15 @@ interface ScheduleBatchPathSelect extends WithTranslation {
     batchSelectedLines: Line[];
 }
 
-const TransitScheduleBatchButton: React.FunctionComponent<ScheduleBatchPathSelect> = (
-    props: ScheduleBatchPathSelect
-) => {
+const TransitScheduleBatchButton: React.FunctionComponent<ScheduleBatchPathSelect> = ( props: ScheduleBatchPathSelect ) => {
     const [state, setState] = React.useState<ScheduleBatchPathSelect>({
-        selectedLine: serviceLocator.selectedObjectsManager.getSingleSelection('line'),
+        // selectedLine: serviceLocator.selectedObjectsManager.getSingleSelection('line'),
         // batchSelectedLines: serviceLocator.selectedObjectsManager.getSingleSelection('scheduleMode')
     });
 
 
     
-    const pathsSelectedLine = state.selectedLine.getPaths()
+    // const pathsSelectedLine = state.selectedLine.getPaths()
     
 
         
