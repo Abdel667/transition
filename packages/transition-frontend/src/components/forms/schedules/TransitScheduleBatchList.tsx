@@ -116,9 +116,6 @@ const TransitScheduleBatchLineSelect: React.FunctionComponent<BatchLineSelectPro
                 />
             </div>
 
-
-
-
             <ButtonList>{linesButtons}</ButtonList>
 
             {!props.batchSelectedLines && (
