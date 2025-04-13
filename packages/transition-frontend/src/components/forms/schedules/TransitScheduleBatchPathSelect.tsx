@@ -16,16 +16,18 @@ import { EventManager } from 'chaire-lib-common/lib/services/events/EventManager
 import { MapUpdateLayerEventType } from 'chaire-lib-frontend/lib/services/map/events/MapEventsCallbacks';
 import InputSelect from 'chaire-lib-frontend/lib/components/input/InputSelect';
 
-interface ScheduleBatchPathSelect extends WithTranslation {
+interface ScheduleBatchPathSelectProps {
     selectedLine: Line;
     batchSelectedLines: Line[];
 }
 
-const TransitScheduleBatchButton: React.FunctionComponent<ScheduleBatchPathSelect> = ( props: ScheduleBatchPathSelect ) => {
-    const [state, setState] = React.useState<ScheduleBatchPathSelect>({
-        // selectedLine: serviceLocator.selectedObjectsManager.getSingleSelection('line'),
-        // batchSelectedLines: serviceLocator.selectedObjectsManager.getSingleSelection('scheduleMode')
+const TransitScheduleBatchPathSelect: React.FunctionComponent<ScheduleBatchPathSelectProps & WithTranslation> = ( 
+    props: ScheduleBatchPathSelectProps & WithTranslation) => {
+    const [state, setState] = React.useState<ScheduleBatchPathSelectProps>({
+        selectedLine: serviceLocator.selectedObjectsManager.getSingleSelection('line'),
+        batchSelectedLines: serviceLocator.selectedObjectsManager.getSingleSelection('scheduleMode'),
     });
+
 
 
     
@@ -69,4 +71,4 @@ const TransitScheduleBatchButton: React.FunctionComponent<ScheduleBatchPathSelec
     );
 };
 
-export default withTranslation(['transit', 'main', 'notifications'])(TransitScheduleBatchButton);
+export default withTranslation(['transit', 'main', 'notifications'])(TransitScheduleBatchPathSelect);
