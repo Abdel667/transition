@@ -16,7 +16,7 @@ import TransitScheduleBatchButton from './TransitScheduleBatchButton';
 import ButtonList from '../../parts/ButtonList';
 
 interface BatchLineSelectProps {
-    batchSelectedLines?: Line[];
+    batchSelectedLines: Line[];
     //onObjectSelected?: (objectId: string) => void;
 }
 
@@ -80,7 +80,23 @@ const TransitScheduleBatchLineSelect: React.FunctionComponent<BatchLineSelectPro
                 {props.t('transit:transitSchedule:BatchSchedules')}
 
             </h3>
-            <span>
+
+            {!props.batchSelectedLines && (
+                <div className='tr__form-buttons-container'>
+                    <Button
+                        color="grey"
+                        icon={faWindowClose}
+                        iconClass="_icon"
+                        label={props.t('transit:transitSchedule:CloseSchedulesWindow')}
+                        onClick={function () {
+                            // close
+                            serviceLocator.selectedObjectsManager.setSelection('scheduleMode', []);
+                            serviceLocator.eventManager.emit('fullSizePanel.hide');
+                        }}
+                    />
+                </div>
+            )}
+            <div className='tr__form-buttons-container _left'>
                 <Button
                     disabled={state.batchSelectedLines.length === filteredlinesCollection.length}
                     color="blue"
@@ -98,21 +114,9 @@ const TransitScheduleBatchLineSelect: React.FunctionComponent<BatchLineSelectPro
                         setState({ batchSelectedLines: [] })
                     }}
                 />
-            </span>
+            </div>
 
-            {!props.batchSelectedLines && (
-                <Button
-                    color="grey"
-                    icon={faWindowClose}
-                    iconClass="_icon"
-                    label={props.t('transit:transitSchedule:CloseSchedulesWindow')}
-                    onClick={function () {
-                        // close
-                        serviceLocator.selectedObjectsManager.setSelection('scheduleMode', []);
-                        serviceLocator.eventManager.emit('fullSizePanel.hide');
-                    }}
-                />
-            )}
+
 
 
             <ButtonList>{linesButtons}</ButtonList>
