@@ -17,65 +17,30 @@ import { MapUpdateLayerEventType } from 'chaire-lib-frontend/lib/services/map/ev
 
 interface ScheduleBatchButtonProps extends WithTranslation {
     line: Line;
-    // selectedLines?: Line[];
+    focusedLine?: Line;
     lineIsSelected?: boolean;
-    //onObjectSelected?: (objectId: string) => void;
+    lineIsFocused?: boolean;
+    onLineSelected: (line: Line) => void;
 }
 
 const TransitScheduleBatchButton: React.FunctionComponent<ScheduleBatchButtonProps> = (props: ScheduleBatchButtonProps) => {
     //let lineIsSelected = (props.selectedLines && props.selectedLines.some((selectedLine) => selectedLine.getId() === props.line.getId())) || false;
-    
+
     const [state, setState] = React.useState<ScheduleBatchButtonProps>({
         // lineIsSelected: (props.selectedLines && props.selectedLines.some((selectedLine) => selectedLine.getId() === props.line.getId())) || false;
-        lineIsSelected: false
+        lineIsSelected: false,
+        lineIsFocused: (props.focusedLine && props.focusedLine.getId() === props.line.getId()) || false
     });
-
     const lineId = props.line.getId()
-    const onSelect: React.MouseEventHandler = async (e: React.MouseEvent) => {
-        if (e) {
-            e.stopPropagation();
-        }
-        await props.line.refreshSchedules(serviceLocator.socketEventManager);
-        //props.line.startEditing();
-        // if (props.onObjectSelected) {
-        //     props.onObjectSelected(props.line.getId());
-        // }
-        onCheckboxChange(!state.lineIsSelected);
-        serviceLocator.selectedObjectsManager.setSelection('batchLineSelect', [props.line]);
-    };
 
-    const onCheckboxChange = (value) => {
-        setState({lineIsSelected: value})
+    const onClick = () => {
+        setState({lineIsSelected: !state.lineIsSelected, lineIsFocused: true})
     }
 
-    console.log(props.line.getAgency().acronym)
+    const onCheckboxChange = (value) => {
+        setState({lineIsSelected: value, lineIsFocused: value})
+    }
 
-    // const onDelete: React.MouseEventHandler = async (e: React.MouseEvent) => {
-    //     if (e) {
-    //         e.stopPropagation();
-    //     }
-
-    //     const lineHasPaths = props.line.hasPaths();
-
-    //     serviceLocator.eventManager.emit('progress', { name: 'DeletingLine', progress: 0.0 });
-    //     await props.line.delete(serviceLocator.socketEventManager);
-    //     if (state.lineIsSelected) {
-    //         serviceLocator.selectedObjectsManager.deselect('line');
-    //         if (lineHasPaths) {
-    //             // reload paths
-    //             await serviceLocator.collectionManager.get('paths').loadFromServer(serviceLocator.socketEventManager);
-    //             serviceLocator.collectionManager.refresh('paths');
-    //             (serviceLocator.eventManager as EventManager).emitEvent<MapUpdateLayerEventType>('map.updateLayer', {
-    //                 layerName: 'transitPaths',
-    //                 data: serviceLocator.collectionManager.get('paths').toGeojson()
-    //             });
-    //         }
-    //     }
-    //     serviceLocator.eventManager.emit('progress', { name: 'DeletingLine', progress: 1.0 });
-    //     serviceLocator.collectionManager.refresh('lines');
-    // };
-
-    const isFrozen = props.line.isFrozen();
     const pathsCount = props.line.paths.length;
     const scheduledServicesCount =
         props.line.attributes.service_ids !== undefined
@@ -85,37 +50,17 @@ const TransitScheduleBatchButton: React.FunctionComponent<ScheduleBatchButtonPro
     return (
         <Button
             key={props.line.getId()}
-            isSelected={state.lineIsSelected}
+            isSelected={state.lineIsFocused}
             flushActionButtons={false}
-            onSelect={{ handler: onSelect }}
+            onSelect={{ handler: onClick }}
         >
             <InputCheckboxBoolean
                 id={`transitBatchLineSelect${lineId}`}
                 label=" "
                 isChecked={state.lineIsSelected}
-                onValueChange={(e) => onCheckboxChange(e.target.value)}
-            //onValueChange={(e) => console.log(e)}
+                onValueChange={(e) => onCheckboxChange(e.target.value) }
             />
-            {/* <InputCheckboxBoolean
-                id={`transitBatchLineSelect${lineId}`}
-                label=" "
-                value={lineIsSelected}
-                choices={[
-                    {
-                        value: false
-                    }
-                ]}
-                localePrefix="transit:transitSchedule"
-                t={props.t}
-                isBoolean={true}
-                onValueChange={(e) => onValueChange({ value: e.target.value })}
-            /> */}
-            {/* <InputCheckboxBoolean
-                id={`formFieldTransitAgencyEditIsFrozen${agencyId}`}
-                label=" "
-                isChecked={isFrozen}
-                onValueChange={(e) => this.onValueChange('is_frozen', { value: e.target.value })}
-            /> */}
+
             <ButtonCell alignment="left">
                 <span className="_circle-button" style={{ backgroundColor: props.line.attributes.color }}></span>
                 <img
@@ -125,15 +70,7 @@ const TransitScheduleBatchButton: React.FunctionComponent<ScheduleBatchButtonPro
                     title={props.t(`transit:transitLine:modes:${props.line.getAttributes().mode}`)}
                 />
             </ButtonCell>
-            {/* {isFrozen && (
-                <ButtonCell alignment="left">
-                    <img
-                        className="_icon-alone"
-                        src={'/dist/images/icons/interface/lock_white.svg'}
-                        alt={props.t('main:Locked')}
-                    />
-                </ButtonCell>
-            )} */}
+
             <ButtonCell alignment="left">{props.line.attributes.shortname}</ButtonCell>
             <ButtonCell alignment="left">{props.line.attributes.longname}</ButtonCell>
             <ButtonCell alignment="flush">

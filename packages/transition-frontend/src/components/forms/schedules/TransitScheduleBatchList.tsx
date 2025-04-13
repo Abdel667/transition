@@ -16,63 +16,51 @@ import TransitScheduleBatchButton from './TransitScheduleBatchButton';
 import ButtonList from '../../parts/ButtonList';
 
 interface BatchLineSelectProps extends WithTranslation {
-    batchSelectedSchedules?: Map<String, [Path,  Path]>;
-    batchSelectedLines?: Line[];
+    batchSelectedLines?: Map<String, [Path, Path]>;
     selectedLine: Line;
     //onObjectSelected?: (objectId: string) => void;
 }
 
 const TransitScheduleBatchLineSelect: React.FunctionComponent<BatchLineSelectProps> = (props: BatchLineSelectProps) => {
-    // const isFrozen = props.selectedLine.isFrozen();
-    // props.selectedLine.refreshPaths();
-    // const scheduleByServiceId = props.selectedLine.attributes.scheduleByServiceId;
-    const lineCollection = serviceLocator.collectionManager.get('lines').getFeatures().sort((lineA, lineB) => lineA.getAttributes().agency_id.localeCompare(lineB.getAttributes().agency_id));
+
+    const [state, setState] = React.useState<BatchLineSelectProps>({
+        batchSelectedLines: serviceLocator.selectedObjectsManager.getSingleSelection('scheduleBatchLines'),
+        selectedLine: serviceLocator.selectedObjectsManager.getSingleSelection('line') && serviceLocator.selectedObjectsManager.getSingleSelection('line')[0]
+    });
     const agencyCollection = serviceLocator.collectionManager.get('agencies').getFeatures()
-    console.log(agencyCollection[0].getLines())
-    // const activeServiceIds: string[] = Object.keys(scheduleByServiceId);
-    // const transitServices = serviceLocator.collectionManager.get('services');
 
-    // const scheduleButtons = Object.keys(scheduleByServiceId).map((serviceId) => {
-    //     const schedule = new Schedule(scheduleByServiceId[serviceId], false, serviceLocator.collectionManager);
-    //     schedule.startEditing();
-    //     return (
-    //         <TransitScheduleButton
-    //             key={schedule.id}
-    //             schedule={schedule}
-    //             selectedSchedule={props.selectedSchedule}
-    //             line={props.selectedLine}
-    //         />
-    //     );
-    // });
+    React.useEffect(() => {
+        const onBatchSelectedLinesUpdate = () =>
+            /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
+            setState(({ batchSelectedLines, ...rest }) => ({
+                ...rest,
+                batchSelectedLines: serviceLocator.selectedObjectsManager.getSingleSelection('scheduleBatchLines')
+            }));
+        serviceLocator.eventManager.on('selected.update.scheduleBatchLines', onBatchSelectedLinesUpdate);
+        return () => {
+            serviceLocator.eventManager.off('selected.update.scheduleBatchLines', onBatchSelectedLinesUpdate);
+        };
+    }, []);
 
-    // const serviceChoices: choiceType[] = [];
-    // if (transitServices && transitServices.size() > 0) {
-    //     const serviceFeatures = transitServices.getFeatures();
-    //     for (let i = 0, count = transitServices.size(); i < count; i++) {
-    //         const serviceFeature = serviceFeatures[i];
-    //         if (
-    //             !activeServiceIds.includes(serviceFeature.id) ||
-    //             (props.selectedSchedule && props.selectedSchedule.attributes.service_id === serviceFeature.id)
-    //         ) {
-    //             serviceChoices.push({
-    //                 value: serviceFeature.id,
-    //                 label: serviceFeature.toString(false)
-    //             });
-    //         }
-    //     }
-    // }
-    const linesButtons = agencyCollection.map((agency) => (
-        <div>
-            <h4 alignment="left">{agency.toString()}</h4>
-            {agency.getLines().map((line)=>(
-                <TransitScheduleBatchButton
-                    key={line.id}
-                    line={line}
-                    // selectedLines={props.batchSelectedLines}
-                />
-            ))}
-        </div>
-    ));
+    const onLineSelectedUpdate = (selectedLine) => {
+        setState({selectedLine: selectedLine})
+        serviceLocator.selectedObjectsManager.setSelection('line', [state.selectedLine])
+    }
+
+
+    let linesButtons: any[] = [];
+
+    agencyCollection.forEach(agency => {
+        const agencyLinesButtons: any[] = []
+        agency.getLines().forEach(line => {
+            if (line.getOutboundPaths().length > 0 && line.getInboundPaths().length > 0)
+                agencyLinesButtons.push(<TransitScheduleBatchButton key={line.id} line={line} selectedLine={state.selectedLine} onLineSelected={onLineSelectedUpdate}/>)
+        });
+
+        if (agencyLinesButtons.length > 0)
+            linesButtons.push(<h4 key={agency.getId()} alignment="left">{agency.toString()}</h4>)
+        linesButtons = linesButtons.concat(agencyLinesButtons)
+    });
 
     return (
         <div>
@@ -83,17 +71,11 @@ const TransitScheduleBatchLineSelect: React.FunctionComponent<BatchLineSelectPro
                     alt={props.t('transit:transitSchedule:BatchSchedules')}
                 />{' '}
                 {props.t('transit:transitSchedule:BatchSchedules')}
-                {/* {props.selectedLine.toString(false) ? ` • ${props.selectedLine.toString(false)}` : ''} */}
+
             </h3>
-            {/* <ButtonList key={`lines${props.agency.getId()}`}> */}
+
             <ButtonList>{linesButtons}</ButtonList>
-            {/* {props.selectedSchedule && (
-                <TransitScheduleEdit
-                    availableServices={serviceChoices}
-                    schedule={props.selectedSchedule}
-                    line={props.selectedLine}
-                />
-            )} */}
+
             {!props.batchSelectedLines && (
                 <Button
                     color="grey"
@@ -102,6 +84,7 @@ const TransitScheduleBatchLineSelect: React.FunctionComponent<BatchLineSelectPro
                     label={props.t('transit:transitSchedule:CloseSchedulesWindow')}
                     onClick={function () {
                         // close
+                        serviceLocator.selectedObjectsManager.setSelection('scheduleMode', []);
                         serviceLocator.eventManager.emit('fullSizePanel.hide');
                     }}
                 />
