@@ -6,7 +6,6 @@
  */
 import React from 'react';
 import { withTranslation, WithTranslation } from 'react-i18next';
-
 import serviceLocator from 'chaire-lib-common/lib/utils/ServiceLocator';
 import Line from 'transition-common/lib/services/line/Line';
 import Button from '../../parts/Button';
@@ -15,30 +14,32 @@ import { InputCheckboxBoolean } from 'chaire-lib-frontend/lib/components/input/I
 import { EventManager } from 'chaire-lib-common/lib/services/events/EventManager';
 import { MapUpdateLayerEventType } from 'chaire-lib-frontend/lib/services/map/events/MapEventsCallbacks';
 
-interface ScheduleBatchButtonProps extends WithTranslation {
+interface ScheduleBatchButtonProps {
     line: Line;
-    focusedLine?: Line;
+    selectedLines: Line[];
     lineIsSelected?: boolean;
-    lineIsFocused?: boolean;
-    onLineSelected: (line: Line) => void;
+    //lineIsFocused?: boolean;
+    onLineSelectedUpdate: (line: Line, value: boolean) => void;
 }
 
-const TransitScheduleBatchButton: React.FunctionComponent<ScheduleBatchButtonProps> = (props: ScheduleBatchButtonProps) => {
+const TransitScheduleBatchButton: React.FunctionComponent<ScheduleBatchButtonProps & WithTranslation> = (props: ScheduleBatchButtonProps & WithTranslation) => {
     //let lineIsSelected = (props.selectedLines && props.selectedLines.some((selectedLine) => selectedLine.getId() === props.line.getId())) || false;
 
-    const [state, setState] = React.useState<ScheduleBatchButtonProps>({
-        // lineIsSelected: (props.selectedLines && props.selectedLines.some((selectedLine) => selectedLine.getId() === props.line.getId())) || false;
-        lineIsSelected: false,
-        lineIsFocused: (props.focusedLine && props.focusedLine.getId() === props.line.getId()) || false
-    });
+    // const [state, setState] = React.useState<ScheduleBatchButtonProps>({
+    //     // lineIsSelected: (props.selectedLines && props.selectedLines.some((selectedLine) => selectedLine.getId() === props.line.getId())) || false;
+    //     lineIsSelected: (props.selectedLines && props.selectedLines.some((selectedLine) => selectedLine.getId() === props.line.getId())) || false,
+    //     //lineIsFocused: (props.focusedLine && props.focusedLine.getId() === props.line.getId()) || false
+    // });
+
+    let lineIsSelected = (props.selectedLines && props.selectedLines.some((selectedLine) => selectedLine.getId() === props.line.getId())) || false;
     const lineId = props.line.getId()
 
     const onClick = () => {
-        setState({lineIsSelected: !state.lineIsSelected, lineIsFocused: true})
+        props.onLineSelectedUpdate(props.line, !lineIsSelected)
+        //setState({lineIsSelected: !state.lineIsSelected, lineIsFocused: true})
     }
 
     const onCheckboxChange = (value) => {
-        setState({lineIsSelected: value, lineIsFocused: value})
     }
 
     const pathsCount = props.line.paths.length;
@@ -50,15 +51,15 @@ const TransitScheduleBatchButton: React.FunctionComponent<ScheduleBatchButtonPro
     return (
         <Button
             key={props.line.getId()}
-            isSelected={state.lineIsFocused}
+            isSelected={lineIsSelected}
             flushActionButtons={false}
             onSelect={{ handler: onClick }}
         >
             <InputCheckboxBoolean
                 id={`transitBatchLineSelect${lineId}`}
                 label=" "
-                isChecked={state.lineIsSelected}
-                onValueChange={(e) => onCheckboxChange(e.target.value) }
+                isChecked={lineIsSelected}
+                onValueChange={ (e) => onCheckboxChange(e.target.value) }
             />
 
             <ButtonCell alignment="left">
