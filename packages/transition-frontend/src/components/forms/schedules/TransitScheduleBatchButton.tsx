@@ -6,13 +6,10 @@
  */
 import React from 'react';
 import { withTranslation, WithTranslation } from 'react-i18next';
-import serviceLocator from 'chaire-lib-common/lib/utils/ServiceLocator';
 import Line from 'transition-common/lib/services/line/Line';
 import Button from '../../parts/Button';
 import ButtonCell from '../../parts/ButtonCell';
 import { InputCheckboxBoolean } from 'chaire-lib-frontend/lib/components/input/InputCheckbox';
-import { EventManager } from 'chaire-lib-common/lib/services/events/EventManager';
-import { MapUpdateLayerEventType } from 'chaire-lib-frontend/lib/services/map/events/MapEventsCallbacks';
 
 interface ScheduleBatchButtonProps {
     line: Line;
@@ -40,6 +37,7 @@ const TransitScheduleBatchButton: React.FunctionComponent<ScheduleBatchButtonPro
     }
 
     const onCheckboxChange = (value) => {
+        // TODO fix checkbox event managment, so it doesn't trigger itself
     }
 
     const pathsCount = props.line.paths.length;
