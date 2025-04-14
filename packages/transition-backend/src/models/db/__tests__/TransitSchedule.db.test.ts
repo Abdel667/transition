@@ -16,7 +16,6 @@ import pathsDbQueries from '../transitPaths.db.queries';
 import ScheduleDataValidator from 'transition-common/lib/services/schedules/ScheduleDataValidator';
 import { ScheduleAttributes, SchedulePeriod } from 'transition-common/lib/services/schedules/Schedule';
 import TrError from 'chaire-lib-common/lib/utils/TrError';
-import Schedule from '../../../../../transition-common/src/services/schedules/Schedule';
 
 const agencyId = uuidV4();
 const lineId = uuidV4();
