@@ -463,7 +463,7 @@ async function updateSchedulesBatch(attributes: ScheduleAttributes[] ): Promise<
         const updatedSchedules = await schedulesDbQueries.batchUpdate(attributes);
         return Status.createOk(updatedSchedules);
     } catch (error) {
-        console.error(error);
+        console.error('Error batch updating schedules: ', error);
         return Status.createError(TrError.isTrError(error) ? error.message : 'Error updating schedules');
     }
 }

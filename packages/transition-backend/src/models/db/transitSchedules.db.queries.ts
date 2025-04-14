@@ -589,10 +589,6 @@ export default {
         { transaction }: { transaction?: Knex.Transaction } = {}
     ) => save({ ...scheduleData, id: scheduleId }, { transaction }),
     save,
-    batchUpdate: (
-        schedulesData: ScheduleAttributes[],
-        { transaction }: { transaction?: Knex.Transaction } = {}
-    ) => saveAll(schedulesData, { transaction }),
     saveAll,
     delete: deleteScheduleData,
     getScheduleIdsForLine,
