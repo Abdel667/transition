@@ -120,5 +120,38 @@ export default {
                 );
             }
         });
+    },
+
+    saveAll: function (
+        objects: GenericObject<any>[],
+        socket: EventEmitter,
+        socketPrefix: string,
+        collection,
+        callback: (() => void) | undefined = undefined
+    ): Promise<any> {
+        console.log('Saving all objects', objects);
+        return new Promise((resolve) => {
+            const ids = objects.map((object) => object.getAttributes().id);
+            socket.emit(
+                `${socketPrefix}.updateBatch`,
+                ids,
+                objects.map((object) => object.getAttributes()),
+                ((response) => {
+                    if (!response.error) {
+                        objects.forEach((object) => {
+                            object._wasFrozen = object.getAttributes().is_frozen === true;
+                            if (collection) {
+                                if (collection.getIndex(object.getAttributes().id) >= 0) {
+                                    collection.updateById(object.getAttributes().id, object);
+                                } else {
+                                    collection.add(object);
+                                }
+                            }
+                        });
+                    }
+                    resolve(response);
+                }).bind(objects)
+            );
+        });
     }
 };

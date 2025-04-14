@@ -140,7 +140,8 @@ class TransitScheduleEdit extends SaveableObjectForm<Schedule, ScheduleFormProps
         if (schedule.isValid) {
             serviceLocator.eventManager.emit('progress', { name: 'SavingSchedule', progress: 0.0 });
             try {
-                await schedule.save(serviceLocator.socketEventManager);
+                // await schedule.save(serviceLocator.socketEventManager);
+                await schedule.saveAll(serviceLocator.socketEventManager);
                 line.updateSchedule(schedule);
                 serviceLocator.selectedObjectsManager.setSelection('line', [line]);
                 serviceLocator.selectedObjectsManager.deselect('schedule');

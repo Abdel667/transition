@@ -509,6 +509,10 @@ class Schedule extends ObjectWithHistory<ScheduleAttributes> implements Saveable
         return SaveUtils.save(this, socket, 'transitSchedule', undefined);
     }
 
+    async saveAll(socket) {
+        return SaveUtils.saveAll([this, this], socket, 'transitSchedule', undefined);
+    }
+
     static getPluralName() {
         return 'schedules';
     }
