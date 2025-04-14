@@ -1,5 +1,5 @@
 /*
- * Copyright 2022, Polytechnique Montreal and contributors
+ * Copyright 2022-2025, Polytechnique Montreal and contributors
  *
  * This file is licensed under the MIT License.
  * License text available at https://opensource.org/licenses/MIT
@@ -82,7 +82,7 @@ class TransitBatchScheduleEdit extends SaveableObjectForm<Schedule, BatchSchedul
         const schedules: Schedule[] = this.props.schedules;
 
         schedules.forEach((schedule) => {
-            const line = lines.find((line) => { line.getId() === schedule.line_id })
+            const line = lines.find((line) => { line.getId() === schedule.attributes.line_id }) //on fait quoi si la line est pas trouvée? faut que le traitement soit dans le for each no?
             schedule.set('service_id', toServiceId);
             if (schedule.isNew()) {
                 serviceLocator.selectedObjectsManager.setSelection('schedule', [schedules]); // ??
@@ -91,9 +91,7 @@ class TransitBatchScheduleEdit extends SaveableObjectForm<Schedule, BatchSchedul
                 schedule.validate();
                 serviceLocator.selectedObjectsManager.setSelection('schedule', [schedules]); // ???
             }
-
         })
-
     }
 
     onChangePeriodsGroup(periodsGroupShortname: string) {
@@ -101,7 +99,7 @@ class TransitBatchScheduleEdit extends SaveableObjectForm<Schedule, BatchSchedul
         const schedules: Schedule[] = this.props.schedules;
 
         schedules.forEach((schedule) => {
-            const line = lines.find((line) => { line.getId() === schedule.line_id })
+            const line = lines.find((line) => { line.getId() === schedule.attributes.line_id }) // avant c'était schedule.line_id
             schedule.set('periods_group_shortname', periodsGroupShortname);
             if (schedule.isNew()) {
                 serviceLocator.selectedObjectsManager.setSelection('schedule', [schedule]);
@@ -110,6 +108,7 @@ class TransitBatchScheduleEdit extends SaveableObjectForm<Schedule, BatchSchedul
                 schedule.validate();
                 serviceLocator.selectedObjectsManager.setSelection('schedule', [schedule]);
             }
+            
         })
     }
 
@@ -141,41 +140,48 @@ class TransitBatchScheduleEdit extends SaveableObjectForm<Schedule, BatchSchedul
     //TODO tout ce qu'il y a en bas
 
     render() {
-        const line = this.props.line;
-        const isFrozen = line.isFrozen();
+        // const line = this.props.line;
+        const lines = this.props.lines
+        // const isFrozen = line.isFrozen();
         line.refreshPaths();
         const paths = line.paths;
         const outboundPathIds: string[] = [];
-        const outboundPathsChoices: choiceType[] = [];
+        // const outboundPathsChoices: choiceType[] = [];
         const inboundPathIds: string[] = [];
-        const inboundPathsChoices: choiceType[] = [];
-        const schedule = this.props.schedule;
-        const scheduleId = schedule.getId();
-        const allowSecondsBasedSchedules = schedule.attributes.allow_seconds_based_schedules || false;
+        // const inboundPathsChoices: choiceType[] = [];
+        // const schedule = this.props.schedule;
+        const schedules = this.props.schedules
+        // const scheduleId = schedule.getId();
+        // const allowSecondsBasedSchedules = schedule.attributes.allow_seconds_based_schedules || false;
+        const allowSecondsBasedSchedules = schedules[0].attributes.allow_seconds_based_schedules || false;
 
-        for (let i = 0, count = paths.length; i < count; i++) {
-            const path = paths[i];
-            if (['outbound', 'loop', 'other'].includes(path.attributes.direction)) {
-                outboundPathIds.push(path.getId());
-                outboundPathsChoices.push({
-                    value: path.getId(),
-                    label: `${path.toString(false)} (${this.props.t(
-                        'transit:transitPath:directions:' + path.getAttributes().direction
-                    )})`
-                });
-            } else if (path.get('direction') === 'inbound') {
-                inboundPathIds.push(path.getId());
-                inboundPathsChoices.push({
-                    value: path.getId(),
-                    label: `${path.toString(false)} (${this.props.t(
-                        'transit:transitPath:directions:' + path.getAttributes().direction
-                    )})`
-                });
-            }
-        }
+        //TODO Ajouter la logique pour choisir les paths par défaut
+        
+        // for (let i = 0, count = paths.length; i < count; i++) {
+        //     const path = paths[i];
+        //     if (['outbound', 'loop', 'other'].includes(path.attributes.direction)) {
+        //         outboundPathIds.push(path.getId());
+        //         outboundPathsChoices.push({
+        //             value: path.getId(),
+        //             label: `${path.toString(false)} (${this.props.t(
+        //                 'transit:transitPath:directions:' + path.getAttributes().direction
+        //             )})`
+        //         });
+        //     } else if (path.get('direction') === 'inbound') {
+        //         inboundPathIds.push(path.getId());
+        //         inboundPathsChoices.push({
+        //             value: path.getId(),
+        //             label: `${path.toString(false)} (${this.props.t(
+        //                 'transit:transitPath:directions:' + path.getAttributes().direction
+        //             )})`
+        //         });
+        //     }
+        // }
 
         const periodsGroups = Preferences.get('transit.periods');
-        const periodsGroupShortname = schedule.attributes.periods_group_shortname || '';
+        // const periodsGroupShortname = schedule.attributes.periods_group_shortname || '';pas sure sure 
+        const periodsGroupShortname = schedules[0].attributes.periods_group_shortname || '';
+
         const periodsGroup = periodsGroupShortname ? periodsGroups[periodsGroupShortname] : null;
         const periodsGroupChoices = Object.keys(periodsGroups).map((periodsGroupShortname) => {
             const periodsGroup = periodsGroups[periodsGroupShortname];
