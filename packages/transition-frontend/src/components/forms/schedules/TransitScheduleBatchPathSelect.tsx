@@ -36,37 +36,37 @@ const TransitScheduleBatchPathSelect: React.FunctionComponent<ScheduleBatchPathS
 
         
     return (
-        <div className="tr__form-section">
-            <div className="apptr__form-input-container">
-                <label>{props.t('transit:transitSchedule:OutboundPath')}</label>
-                <InputSelect
-                    id={`formFieldTransitScheduleOutboundPath`}
-                    value={outboundPathId}
-                    choices={outboundPathsChoices}
-                    disabled={isFrozen}
-                    onValueChange={(e) =>
-                        onValueChange(`periods[${periodIndex}].outbound_path_id`, {
-                            value: e.target.value
-                        })
-                    }
-                />
-            </div>
-            <div className="apptr__form-input-container">
-                <label>{props.t('transit:transitSchedule:InboundPath')}</label>
-                <InputSelect
-                    id={`formFieldTransitScheduleInboundPath`}
-                    value={inboundPathId}
-                    choices={inboundPathsChoices}
-                    disabled={isFrozen}
-                    onValueChange={(e) =>
-                        onValueChange(`periods[${periodIndex}].inbound_path_id`, {
-                            value: e.target.value
-                        })
-                    }
-                />
-            </div>
-        </div>
-            
+        // <div className="tr__form-section">
+        //     <div className="apptr__form-input-container">
+        //         <label>{props.t('transit:transitSchedule:OutboundPath')}</label>
+        //         <InputSelect
+        //             id={`formFieldTransitScheduleOutboundPath`}
+        //             value={outboundPathId}
+        //             choices={outboundPathsChoices}
+        //             disabled={isFrozen}
+        //             onValueChange={(e) =>
+        //                 onValueChange(`periods[${periodIndex}].outbound_path_id`, {
+        //                     value: e.target.value
+        //                 })
+        //             }
+        //         />
+        //     </div>
+        //     <div className="apptr__form-input-container">
+        //         <label>{props.t('transit:transitSchedule:InboundPath')}</label>
+        //         <InputSelect
+        //             id={`formFieldTransitScheduleInboundPath`}
+        //             value={inboundPathId}
+        //             choices={inboundPathsChoices}
+        //             disabled={isFrozen}
+        //             onValueChange={(e) =>
+        //                 onValueChange(`periods[${periodIndex}].inbound_path_id`, {
+        //                     value: e.target.value
+        //                 })
+        //             }
+        //         />
+        //     </div>
+        // </div>
+            <div>test</div>
 
     );
 };

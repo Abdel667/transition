@@ -176,7 +176,7 @@ const TransitScheduleBatchList: React.FunctionComponent<BatchListProps & WithTra
                 
                 {state.isSelectionConfirmed == false && <span title={props.t('transit:transitSchedule:ConfirmBatchLineSelection')}>
                     <Button
-                        disabled={state.batchSelectedLines.length < 1 || state.isSelectionConfirmed === true}
+                        disabled={state.batchSelectedLines.length < 1 || state.isSelectionConfirmed}
                         icon={faCheckCircle}
                         iconClass="_icon"
                         label={props.t('transit:transitSchedule:ConfirmBatchLineSelection')}

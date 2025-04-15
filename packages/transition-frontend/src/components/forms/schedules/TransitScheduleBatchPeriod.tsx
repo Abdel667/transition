@@ -28,9 +28,10 @@ import {
 import serviceLocator from 'chaire-lib-common/lib/utils/ServiceLocator';
 import Schedule from 'transition-common/lib/services/schedules/Schedule';
 import Line from 'transition-common/lib/services/line/Line';
+import Path from 'transition-common/lib/services/path/Path';
 
 interface TransitScheduleBatchPeriodProps {
-    schedules: Map<String,Schedule>;
+    schedules: Schedule[];
     lines: Line[];
     periodIndex: number;
     period: any;
@@ -50,18 +51,14 @@ const TransitScheduleBatchPeriod: React.FC<TransitScheduleBatchPeriodProps> = (p
 
     const {
         schedules,
+        lines,
         period,
         schedulePeriod,
         periodIndex,
-        outboundPathsChoices,
-        inboundPathsChoices,
-        outboundPathIds,
-        inboundPathIds,
         isFrozen,
         allowSecondsBasedSchedules,
         resetChangesCount,
         onValueChange,
-        lines
     } = props;
 
     const periodName = period.name[i18n.language];
@@ -69,19 +66,22 @@ const TransitScheduleBatchPeriod: React.FC<TransitScheduleBatchPeriodProps> = (p
     const periodStartAtTimeStr = decimalHourToTimeStr(period.startAtHour);
     const periodEndAtTimeStr = decimalHourToTimeStr(period.endAtHour);
 
+    let chosenInboundPathId = '';
+    let chosenOutboundPathId = '';
+
     const trips = schedulePeriod.trips || [];
     const tripsCount = trips.length;
 
-    const actualOutboundPathId = schedulePeriod.outbound_path_id;
-    const outboundPathId =
-        actualOutboundPathId || (outboundPathsChoices.length === 1 ? outboundPathsChoices[0].value : '');
+    // const actualOutboundPathId = schedulePeriod.outbound_path_id;
+    // const outboundPathId =
+    //     actualOutboundPathId || (outboundPathsChoices.length === 1 ? outboundPathsChoices[0].value : '');
 
-    const actualInboundPathId = schedulePeriod.inbound_path_id;
-    const inboundPathId = actualInboundPathId || (inboundPathsChoices.length === 1 ? inboundPathsChoices[0].value : '');
+    // const actualInboundPathId = schedulePeriod.inbound_path_id;
+    // const inboundPathId = actualInboundPathId || (inboundPathsChoices.length === 1 ? inboundPathsChoices[0].value : '');
 
-    const outboundTripsCells: React.ReactNode[] = [];
-    const inboundTripsCells: React.ReactNode[] = [];
-    const tripRows: React.ReactNode[] = [];
+    // const outboundTripsCells: React.ReactNode[] = [];
+    // const inboundTripsCells: React.ReactNode[] = [];
+    // const tripRows: React.ReactNode[] = [];
 
     // for (let tripI = 0; tripI < tripsCount; tripI++) {
     //     const trip = trips[tripI];
@@ -112,6 +112,31 @@ const TransitScheduleBatchPeriod: React.FC<TransitScheduleBatchPeriodProps> = (p
     //     );
     // }
 
+    // Automatically select the paths with the bigger stops count
+    lines.forEach(line => {
+        const paths = line.paths
+        let chosenOutboundPath;
+        let chosenInboundPath;
+        paths.forEach(path => {
+            if (['outbound', 'loop', 'other'].includes(path.attributes.direction)) {
+                chosenOutboundPath = !chosenOutboundPath || chosenOutboundPath.countStops() < path.countStops() ? path : chosenOutboundPath
+            }
+            else if (path.attributes.direction == 'inbound') {
+                chosenInboundPath = !chosenInboundPath || chosenInboundPath.countStops() < path.countStops() ? path : chosenInboundPath
+            }
+        })
+        chosenOutboundPathId = chosenOutboundPath ? chosenOutboundPath.getId() : ''
+        chosenInboundPathId = chosenInboundPath ? chosenOutboundPath.getId() : ''
+        const schedule = schedules.find((schedule) => { schedule.attributes.line_id === line.getId() })
+        if (schedule && chosenOutboundPath) {
+            schedule.set(`periods[${periodIndex}].outbound_path_id`, chosenOutboundPath.getId());
+            schedule.set(`periods[${periodIndex}].inbound_path_id`, chosenInboundPath.getId());
+        }
+
+
+    });
+
+
     const intervalSeconds = schedulePeriod.interval_seconds;
     const calculatedIntervalSeconds = schedulePeriod.calculated_interval_seconds;
     const numberOfUnits = schedulePeriod.number_of_units;
@@ -121,23 +146,25 @@ const TransitScheduleBatchPeriod: React.FC<TransitScheduleBatchPeriodProps> = (p
     const customEndAtStr = schedulePeriod.custom_end_at_str || undefined;
 
     /* temporary for calculations: TODO Do we really need this? */
-    line.attributes.data.tmpIntervalSeconds = intervalSeconds || calculatedIntervalSeconds;
-    line.attributes.data.tmpNumberOfUnits = numberOfUnits || calculatedNumberOfUnits;
+    // line.attributes.data.tmpIntervalSeconds = intervalSeconds || calculatedIntervalSeconds;
+    // line.attributes.data.tmpNumberOfUnits = numberOfUnits || calculatedNumberOfUnits;
     /* */
 
     const handleGenerateSchedule = () => {
-    
+
         lines.forEach(line => {
-            const schedule = schedules.get(line.attributes.line_id)
-            schedule.set(`periods[${periodIndex}].outbound_path_id`, outboundPathId);
-            schedule.set(`periods[${periodIndex}].inbound_path_id`, inboundPathId);
-    
-            const response = schedule.generateForPeriod(periodShortname);
-            if (response.trips) {
-                schedule.set(`periods[${periodIndex}].trips`, response.trips);
+            const schedule = schedules.find((schedule) => { schedule.attributes.line_id === line.getId() })
+            if (schedule) {
+                // schedule.set(`periods[${periodIndex}].outbound_path_id`, outboundPathId);
+                // schedule.set(`periods[${periodIndex}].inbound_path_id`, inboundPathId);
+
+                const response = schedule.generateForPeriod(periodShortname);
+                if (response.trips) {
+                    schedule.set(`periods[${periodIndex}].trips`, response.trips);
+                }
             }
             //serviceLocator.selectedObjectsManager.setSelection('schedule', [schedule]);
-            
+
         });
     };
 
@@ -246,21 +273,21 @@ const TransitScheduleBatchPeriod: React.FC<TransitScheduleBatchPeriodProps> = (p
                 <div className="tr__form-section">
                     {isFrozen !== true && (
                         <div className="tr__form-buttons-container _left">
-                            {!_isBlank(outboundPathId) &&
+                            {!_isBlank(chosenOutboundPathId) &&
                                 ((!_isBlank(intervalSeconds) && _isBlank(numberOfUnits)) ||
                                     (!_isBlank(numberOfUnits) && _isBlank(intervalSeconds))) && (
-                                <Button
-                                    color="blue"
-                                    icon={faSyncAlt}
-                                    iconClass="_icon"
-                                    label={t('transit:transitSchedule:GenerateSchedule')}
-                                    onClick={handleGenerateSchedule}
-                                />
-                            )}
+                                    <Button
+                                        color="blue"
+                                        icon={faSyncAlt}
+                                        iconClass="_icon"
+                                        label={t('transit:transitSchedule:GenerateSchedule')}
+                                        onClick={handleGenerateSchedule}
+                                    />
+                                )}
                         </div>
                     )}
                 </div>
-                {tripsCount > 0 && (
+                {/* {tripsCount > 0 && (
                     <div className="tr__form-section">
                         <table className="_schedule">
                             <tbody>
@@ -272,7 +299,7 @@ const TransitScheduleBatchPeriod: React.FC<TransitScheduleBatchPeriodProps> = (p
                             </tbody>
                         </table>
                     </div>
-                )}
+                )} */}
             </div>
         </div>
     );

@@ -171,11 +171,6 @@ class TransitScheduleBatchEdit extends SaveableObjectForm<Schedule, ScheduleBatc
 
         //TODO Ajouter la logique pour choisir les paths par défaut
 
-        lines.forEach(line => {
-            const paths = line.paths
-
-        });
-
         // for (let i = 0, count = paths.length; i < count; i++) {
         //     const path = paths[i];
         //     if (['outbound', 'loop', 'other'].includes(path.attributes.direction)) {
