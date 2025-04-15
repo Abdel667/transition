@@ -130,36 +130,46 @@ export default {
         callback: (() => void) | undefined = undefined
     ): Promise<any> {
         return new Promise((resolve) => {
+            console.log("INSIDE")
             socket.emit(
                 `${socketPrefix}.updateBatch`,
-                {},
-                (response) => {
+                objects[0].getAttributes(),
+                ((response) => {
                     console.log('OUTSIDE ////////////////////////////////////////////////////////////////////////');
                     console.log(response);
-                });
-                // objects.map((object) => object.getAttributes()),
-                // ((response) => {
-                //     if (!response.error) {
-                //         const updatedIds = response.ids || [];
-                //         updatedIds.forEach(({ id: updatedId }, index) => {
-                //             const object = objects[index];
-                //             object.set('id', updatedId);
-                //             object._wasFrozen = object.getAttributes().is_frozen === true;
-                //             if (collection) {
-                //                 if (collection.getIndex(updatedId) >= 0) {
-                //                     collection.updateById(updatedId, object);
-                //                 } else {
-                //                     collection.add(object);
-                //                 }
-                //             }
-                //         });
-                //     }
-                //     if (typeof callback === 'function') {
-                //         callback = callback.bind(objects);
-                //         callback();
-                //     }
-                //     resolve(response);
-                // }).bind(objects)
+                    resolve(response);
+                }).bind(objects)
+            );
+            // socket.emit(
+            //     `${socketPrefix}.updateBatch`,
+            //     objects[0].getAttributes(),
+            //     ((response) => {
+            //         console.log('OUTSIDE ////////////////////////////////////////////////////////////////////////');
+            //         console.log(response);
+            //     }));
+            // objects.map((object) => object.getAttributes()),
+            // ((response) => {
+            //     if (!response.error) {
+            //         const updatedIds = response.ids || [];
+            //         updatedIds.forEach(({ id: updatedId }, index) => {
+            //             const object = objects[index];
+            //             object.set('id', updatedId);
+            //             object._wasFrozen = object.getAttributes().is_frozen === true;
+            //             if (collection) {
+            //                 if (collection.getIndex(updatedId) >= 0) {
+            //                     collection.updateById(updatedId, object);
+            //                 } else {
+            //                     collection.add(object);
+            //                 }
+            //             }
+            //         });
+            //     }
+            //     if (typeof callback === 'function') {
+            //         callback = callback.bind(objects);
+            //         callback();
+            //     }
+            //     resolve(response);
+            // }).bind(objects)
             // );
         });
     }

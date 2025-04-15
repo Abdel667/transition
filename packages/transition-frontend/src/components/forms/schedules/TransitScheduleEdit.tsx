@@ -131,24 +131,32 @@ class TransitScheduleEdit extends SaveableObjectForm<Schedule, ScheduleFormProps
         const line = this.props.line;
         const isFrozen = line.isFrozen();
         const schedule = this.props.schedule;
+        console.log("CALL ONSAVE")
         // save
         if (isFrozen === true) {
+            console.log("FROZEN")
             serviceLocator.selectedObjectsManager.deselect('schedule');
             return true;
         }
         schedule.validate();
         if (schedule.isValid) {
+            console.log("VALID SCHEDULE")
             serviceLocator.eventManager.emit('progress', { name: 'SavingSchedule', progress: 0.0 });
             try {
                 // await schedule.save(serviceLocator.socketEventManager);
+                console.log("ENTER TRY")
                 await schedule.saveAll(serviceLocator.socketEventManager);
                 line.updateSchedule(schedule);
                 serviceLocator.selectedObjectsManager.setSelection('line', [line]);
                 serviceLocator.selectedObjectsManager.deselect('schedule');
+                console.log("SAVE TRY")
+
             } finally {
                 serviceLocator.eventManager.emit('progress', { name: 'SavingSchedule', progress: 1.0 });
+                console.log("SAVE SUCCESS")
             }
         } else {
+            console.log("SAVE FAIL")
             serviceLocator.selectedObjectsManager.setSelection('schedule', [schedule]);
         }
     };
