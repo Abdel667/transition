@@ -129,29 +129,38 @@ export default {
         collection,
         callback: (() => void) | undefined = undefined
     ): Promise<any> {
-        console.log('Saving all objects', objects);
         return new Promise((resolve) => {
-            const ids = objects.map((object) => object.getAttributes().id);
             socket.emit(
                 `${socketPrefix}.updateBatch`,
-                ids,
-                objects.map((object) => object.getAttributes()),
-                ((response) => {
-                    if (!response.error) {
-                        objects.forEach((object) => {
-                            object._wasFrozen = object.getAttributes().is_frozen === true;
-                            if (collection) {
-                                if (collection.getIndex(object.getAttributes().id) >= 0) {
-                                    collection.updateById(object.getAttributes().id, object);
-                                } else {
-                                    collection.add(object);
-                                }
-                            }
-                        });
-                    }
-                    resolve(response);
-                }).bind(objects)
-            );
+                {},
+                (response) => {
+                    console.log('OUTSIDE ////////////////////////////////////////////////////////////////////////');
+                    console.log(response);
+                });
+                // objects.map((object) => object.getAttributes()),
+                // ((response) => {
+                //     if (!response.error) {
+                //         const updatedIds = response.ids || [];
+                //         updatedIds.forEach(({ id: updatedId }, index) => {
+                //             const object = objects[index];
+                //             object.set('id', updatedId);
+                //             object._wasFrozen = object.getAttributes().is_frozen === true;
+                //             if (collection) {
+                //                 if (collection.getIndex(updatedId) >= 0) {
+                //                     collection.updateById(updatedId, object);
+                //                 } else {
+                //                     collection.add(object);
+                //                 }
+                //             }
+                //         });
+                //     }
+                //     if (typeof callback === 'function') {
+                //         callback = callback.bind(objects);
+                //         callback();
+                //     }
+                //     resolve(response);
+                // }).bind(objects)
+            // );
         });
     }
 };
