@@ -589,7 +589,10 @@ export default {
         { transaction }: { transaction?: Knex.Transaction } = {}
     ) => save({ ...scheduleData, id: scheduleId }, { transaction }),
     save,
-    saveAll,
+    saveAll: (
+        schedulesData: ScheduleAttributes[],
+        { transaction }: { transaction?: Knex.Transaction } = {}
+    ) => saveAll(schedulesData, { transaction }),
     delete: deleteScheduleData,
     getScheduleIdsForLine,
     truncateSchedules: truncate.bind(null, knex, scheduleTable),
