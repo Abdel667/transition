@@ -7,7 +7,6 @@
 import { EventEmitter } from 'events';
 import transitObjectDataHandlers from '../services/transitObjects/TransitObjectsDataHandler';
 import { duplicateServices } from '../services/transitObjects/transitServices/ServiceDuplicator';
-import { updateSchedulesBatch } from '../services/transitObjects/TransitObjectsDataHandler';
 
 function setupObjectSocketRoutes(socket: EventEmitter) {
     for (const lowerCasePlural in transitObjectDataHandlers) {
@@ -121,12 +120,16 @@ function setupObjectSocketRoutes(socket: EventEmitter) {
                 }
             );
         }
+
+        // Update multiple objects in the database and cache if required
+        if (lowerCasePlural === 'schedules' && dataHandler.updateBatch) {
+            socket.on(`transit${dataHandler.classNamePlural}.updateBatch`, async (attributes, callback) => {
+                console.log('INSIDE ////////////////////////////////////////////////////////////////////////');
+                const response = await dataHandler.updateBatch!(socket, attributes);
+                callback(response);
+            });
+        }
     }
-    // Update multiple schedules
-    socket.on('transitSchedules.updateBatch', async (schedules, callback) => {
-        const response = await updateSchedulesBatch(schedules);
-        callback(response);
-    });
 
     // Add duplication sockets routes. We can't add them in the loop above
     // because they are not part of the transitObjectsDataHandlers, as each

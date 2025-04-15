@@ -56,6 +56,7 @@ interface TransitObjectDataHandler {
     loadCache?: (id: string, customCachePath: string | undefined) => Promise<Record<string, any>>;
     saveCollectionCache?: (collection, customCachePath) => Promise<Record<string, any>>;
     loadCollectionCache?: (customCachePath) => Promise<Record<string, any>>;
+    updateBatch?: (socket: EventEmitter, attributes: GenericAttributes[]) => Promise<Record<string, any>>;
 }
 
 const transitClassesConfig = {
@@ -452,22 +453,48 @@ function createDataHandlers(): Record<string, TransitObjectDataHandler> {
             };
         }
 
+        if (lowerCasePlural === 'schedules') {
+            dataHandler.updateBatch = async (socket: EventEmitter, attributes: GenericAttributes[]): Promise<Record<string, any>> => {
+                try {
+                    const updatedIds = await transitClassConfig.dbQueries.saveAll(attributes);
+
+                    if (isSocketIo(socket)) {
+                        socket.broadcast.emit('data.updated');
+                    }
+
+                    if (transitClassConfig.cacheQueries.objectToCache) {
+                        try {
+                            for (const updatedId of updatedIds) {
+                                const updatedObject = await transitClassConfig.dbQueries.read(updatedId);
+                                await transitClassConfig.cacheQueries.objectToCache(
+                                    updatedObject.attributes ? updatedObject.attributes : updatedObject,
+                                    updatedObject.attributes?.data?.customCachePath
+                                );
+                            }
+                        } catch (error) {
+                            throw new TrError(
+                                `cannot update cache files for ${transitClassConfig.classNamePlural} because of an error: ${error}`,
+                                'SKTTRUPB0001',
+                                'CacheCouldNotBeUpdatedBecauseError'
+                            );
+                        }
+                    } else {
+                        socket.emit('cache.dirty');
+                    }
+
+                    return { ids: updatedIds.map((updatedId) => ({ id: updatedId })) };
+                } catch (error) {
+                    console.error('Error batch updating schedules: ', error);
+                    return TrError.isTrError(error) ? error.export() : { error: 'Error updating batch' };
+                }
+            };
+        }
+
         allDataHandlers[lowerCasePlural] = dataHandler;
     }
 
     return allDataHandlers;
 }
-async function updateSchedulesBatch(attributes: ScheduleAttributes[] ): Promise<Status.Status<number[]>> {
-    try {
-        console.log('updateSchedulesBatch appelé avec');
-        const updatedSchedules = await schedulesDbQueries.saveAll(attributes);
-        return Status.createOk(updatedSchedules);
-    } catch (error) {
-        console.error('Error batch updating schedules: ', error);
-        return Status.createError(TrError.isTrError(error) ? error.message : 'Error updating schedules');
-    }
-}
 
 const transitObjectDataHandlers: Record<string, TransitObjectDataHandler> = createDataHandlers();
-export { updateSchedulesBatch };
 export default transitObjectDataHandlers;
