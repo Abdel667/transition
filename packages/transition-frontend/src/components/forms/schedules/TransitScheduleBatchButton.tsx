@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2025, Polytechnique Montreal and contributors
+ * Copyright 2025, Polytechnique Montreal and contributors
  *
  * This file is licensed under the MIT License.
  * License text available at https://opensource.org/licenses/MIT
@@ -32,12 +32,14 @@ const TransitScheduleBatchButton: React.FunctionComponent<ScheduleBatchButtonPro
     const lineId = props.line.getId()
 
     const onClick = () => {
-        props.onLineSelectedUpdate(props.line, !lineIsSelected)
+        if (!isFrozen) {
+            props.onLineSelectedUpdate(props.line, !lineIsSelected)
+        }
         //setState({lineIsSelected: !state.lineIsSelected, lineIsFocused: true})
     }
 
     const onCheckboxChange = (value) => {
-        // TODO fix checkbox event managment, so it doesn't trigger itself
+        // TODO fix checkbox event managment, so it doesn't trigger itself and other checkboxes
     }
 
     const pathsCount = props.line.paths.length;
@@ -45,6 +47,8 @@ const TransitScheduleBatchButton: React.FunctionComponent<ScheduleBatchButtonPro
         props.line.attributes.service_ids !== undefined
             ? props.line.attributes.service_ids.length
             : Object.keys(props.line.attributes.scheduleByServiceId).length;
+
+    const isFrozen = props.line.isFrozen()
 
     return (
         <Button
@@ -54,11 +58,21 @@ const TransitScheduleBatchButton: React.FunctionComponent<ScheduleBatchButtonPro
             onSelect={{ handler: onClick }}
         >
             <InputCheckboxBoolean
+                disabled={isFrozen}
                 id={`transitBatchLineSelect${lineId}`}
                 label=" "
                 isChecked={lineIsSelected}
-                onValueChange={ (e) => onCheckboxChange(e.target.value) }
+                onValueChange={(e) => onCheckboxChange(e.target.value)}
             />
+            {isFrozen && (
+                <ButtonCell alignment="left">
+                    <img
+                        className="_icon-alone"
+                        src={'/dist/images/icons/interface/lock_white.svg'}
+                        alt={props.t('main:Locked')}
+                    />
+                </ButtonCell>
+            )}
 
             <ButtonCell alignment="left">
                 <span className="_circle-button" style={{ backgroundColor: props.line.attributes.color }}></span>

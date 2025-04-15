@@ -29,9 +29,9 @@ import serviceLocator from 'chaire-lib-common/lib/utils/ServiceLocator';
 import Schedule from 'transition-common/lib/services/schedules/Schedule';
 import Line from 'transition-common/lib/services/line/Line';
 
-interface TransitSchedulePeriodProps {
-    schedule: Schedule;
-    line: Line;
+interface TransitScheduleBatchPeriodProps {
+    schedules: Map<String,Schedule>;
+    lines: Line[];
     periodIndex: number;
     period: any;
     schedulePeriod: any;
@@ -40,17 +40,16 @@ interface TransitSchedulePeriodProps {
     outboundPathIds: string[];
     inboundPathIds: string[];
     isFrozen: boolean;
-    scheduleId: string;
     allowSecondsBasedSchedules: boolean;
     resetChangesCount: number;
     onValueChange: (path: string, newValue: { value: any }) => void;
 }
 
-const TransitSchedulePeriod: React.FC<TransitSchedulePeriodProps> = (props) => {
+const TransitScheduleBatchPeriod: React.FC<TransitScheduleBatchPeriodProps> = (props) => {
     const { t, i18n } = useTranslation();
 
     const {
-        schedule,
+        schedules,
         period,
         schedulePeriod,
         periodIndex,
@@ -59,11 +58,10 @@ const TransitSchedulePeriod: React.FC<TransitSchedulePeriodProps> = (props) => {
         outboundPathIds,
         inboundPathIds,
         isFrozen,
-        scheduleId,
         allowSecondsBasedSchedules,
         resetChangesCount,
         onValueChange,
-        line
+        lines
     } = props;
 
     const periodName = period.name[i18n.language];
@@ -85,34 +83,34 @@ const TransitSchedulePeriod: React.FC<TransitSchedulePeriodProps> = (props) => {
     const inboundTripsCells: React.ReactNode[] = [];
     const tripRows: React.ReactNode[] = [];
 
-    for (let tripI = 0; tripI < tripsCount; tripI++) {
-        const trip = trips[tripI];
-        if (outboundPathIds.includes(trip.path_id)) {
-            // outbound trip
-            outboundTripsCells.push(
-                <td key={`outboundTrip_${tripI}`}>
-                    {secondsSinceMidnightToTimeStr(trip.departure_time_seconds, true, allowSecondsBasedSchedules)}
-                </td>
-            );
-        } else if (inboundPathIds.includes(trip.path_id)) {
-            inboundTripsCells.push(
-                <td key={`inboundTrip_${tripI}`}>
-                    {secondsSinceMidnightToTimeStr(trip.departure_time_seconds, true, allowSecondsBasedSchedules)}
-                </td>
-            );
-        }
-    }
+    // for (let tripI = 0; tripI < tripsCount; tripI++) {
+    //     const trip = trips[tripI];
+    //     if (outboundPathIds.includes(trip.path_id)) {
+    //         // outbound trip
+    //         outboundTripsCells.push(
+    //             <td key={`outboundTrip_${tripI}`}>
+    //                 {secondsSinceMidnightToTimeStr(trip.departure_time_seconds, true, allowSecondsBasedSchedules)}
+    //             </td>
+    //         );
+    //     } else if (inboundPathIds.includes(trip.path_id)) {
+    //         inboundTripsCells.push(
+    //             <td key={`inboundTrip_${tripI}`}>
+    //                 {secondsSinceMidnightToTimeStr(trip.departure_time_seconds, true, allowSecondsBasedSchedules)}
+    //             </td>
+    //         );
+    //     }
+    // }
 
-    const totalNumberOfTripRows = Math.max(outboundTripsCells.length, inboundTripsCells.length);
+    // const totalNumberOfTripRows = Math.max(outboundTripsCells.length, inboundTripsCells.length);
 
-    for (let rowI = 0; rowI < totalNumberOfTripRows; rowI++) {
-        tripRows.push(
-            <tr key={rowI}>
-                {outboundTripsCells[rowI] || <td key={`emptyOutboundTrip_${rowI}`}></td>}
-                {inboundTripsCells[rowI] || <td key={`emptyInboundTrip_${rowI}`}></td>}
-            </tr>
-        );
-    }
+    // for (let rowI = 0; rowI < totalNumberOfTripRows; rowI++) {
+    //     tripRows.push(
+    //         <tr key={rowI}>
+    //             {outboundTripsCells[rowI] || <td key={`emptyOutboundTrip_${rowI}`}></td>}
+    //             {inboundTripsCells[rowI] || <td key={`emptyInboundTrip_${rowI}`}></td>}
+    //         </tr>
+    //     );
+    // }
 
     const intervalSeconds = schedulePeriod.interval_seconds;
     const calculatedIntervalSeconds = schedulePeriod.calculated_interval_seconds;
@@ -128,20 +126,21 @@ const TransitSchedulePeriod: React.FC<TransitSchedulePeriodProps> = (props) => {
     /* */
 
     const handleGenerateSchedule = () => {
-        schedule.set(`periods[${periodIndex}].outbound_path_id`, outboundPathId);
-        schedule.set(`periods[${periodIndex}].inbound_path_id`, inboundPathId);
-
-        const response = schedule.generateForPeriod(periodShortname);
-        if (response.trips) {
-            schedule.set(`periods[${periodIndex}].trips`, response.trips);
-        }
-        serviceLocator.selectedObjectsManager.setSelection('schedule', [schedule]);
+    
+        lines.forEach(line => {
+            const schedule = schedules.get(line.attributes.line_id)
+            schedule.set(`periods[${periodIndex}].outbound_path_id`, outboundPathId);
+            schedule.set(`periods[${periodIndex}].inbound_path_id`, inboundPathId);
+    
+            const response = schedule.generateForPeriod(periodShortname);
+            if (response.trips) {
+                schedule.set(`periods[${periodIndex}].trips`, response.trips);
+            }
+            //serviceLocator.selectedObjectsManager.setSelection('schedule', [schedule]);
+            
+        });
     };
 
-    const handleRemoveSchedule = () => {
-        schedule.set(`periods[${periodIndex}].trips`, []);
-        serviceLocator.selectedObjectsManager.setSelection('schedule', [schedule]);
-    };
 
     return (
         <div
@@ -163,47 +162,17 @@ const TransitSchedulePeriod: React.FC<TransitSchedulePeriodProps> = (props) => {
             </h4>
             <div className="tr__form-section">
                 <div className="tr__form-section">
-                    <div className="apptr__form-input-container">
-                        <label>{t('transit:transitSchedule:OutboundPath')}</label>
-                        <InputSelect
-                            id={`formFieldTransitScheduleOutboundPathPeriod${periodShortname}${scheduleId}`}
-                            value={outboundPathId}
-                            choices={outboundPathsChoices}
-                            disabled={isFrozen}
-                            t={t}
-                            onValueChange={(e) =>
-                                onValueChange(`periods[${periodIndex}].outbound_path_id`, {
-                                    value: e.target.value
-                                })
-                            }
-                        />
-                    </div>
-                    <div className="apptr__form-input-container">
-                        <label>{t('transit:transitSchedule:InboundPath')}</label>
-                        <InputSelect
-                            id={`formFieldTransitScheduleInboundPathPeriod${periodShortname}${scheduleId}`}
-                            value={inboundPathId}
-                            choices={inboundPathsChoices}
-                            disabled={isFrozen}
-                            t={t}
-                            onValueChange={(e) =>
-                                onValueChange(`periods[${periodIndex}].inbound_path_id`, {
-                                    value: e.target.value
-                                })
-                            }
-                        />
-                    </div>
                     {allowSecondsBasedSchedules !== true && (
                         <div className="apptr__form-input-container">
                             <label>{t('transit:transitSchedule:IntervalMinutes')}</label>
                             <InputStringFormatted
-                                id={`formFieldTransitScheduleIntervalMinutesPeriod${periodShortname}${scheduleId}`}
+                                id={`formFieldTransitScheduleIntervalMinutesPeriod${periodShortname}`}
                                 disabled={isFrozen}
                                 value={intervalSeconds}
                                 onValueUpdated={(value) =>
                                     onValueChange(`periods[${periodIndex}].interval_seconds`, value)
                                 }
-                                key={`formFieldTransitScheduleIntervalMinutesPeriod${periodShortname}${scheduleId}${resetChangesCount}`}
+                                key={`formFieldTransitScheduleIntervalMinutesPeriod${periodShortname}${resetChangesCount}`}
                                 stringToValue={minutesToSeconds}
                                 valueToString={(val) => _toString(secondsToMinutes(val))}
                             />
@@ -213,12 +182,12 @@ const TransitSchedulePeriod: React.FC<TransitSchedulePeriodProps> = (props) => {
                         <div className="apptr__form-input-container">
                             <label>{t('transit:transitSchedule:IntervalSeconds')}</label>
                             <InputStringFormatted
-                                id={`formFieldTransitScheduleIntervalSecondsPeriod${periodShortname}${scheduleId}`}
+                                id={`formFieldTransitScheduleIntervalSecondsPeriod${periodShortname}`}
                                 disabled={isFrozen}
                                 value={intervalSeconds}
                                 stringToValue={_toInteger}
                                 valueToString={_toString}
-                                key={`formFieldTransitScheduleIntervalMinutesPeriod${periodShortname}${scheduleId}${resetChangesCount}`}
+                                key={`formFieldTransitScheduleIntervalMinutesPeriod${periodShortname}${resetChangesCount}`}
                                 onValueUpdated={(value) =>
                                     onValueChange(`periods[${periodIndex}].interval_seconds`, value)
                                 }
@@ -235,12 +204,12 @@ const TransitSchedulePeriod: React.FC<TransitSchedulePeriodProps> = (props) => {
                     <div className="apptr__form-input-container">
                         <label>{t('transit:transitSchedule:NumberOfUnits')}</label>
                         <InputStringFormatted
-                            id={`formFieldTransitScheduleNumberOfUnitsPeriod${periodShortname}${scheduleId}`}
+                            id={`formFieldTransitScheduleNumberOfUnitsPeriod${periodShortname}`}
                             disabled={isFrozen}
                             value={numberOfUnits}
                             stringToValue={_toInteger}
                             valueToString={_toString}
-                            key={`formFieldTransitScheduleNumberOfUnitsPeriod${periodShortname}${scheduleId}${resetChangesCount}`}
+                            key={`formFieldTransitScheduleNumberOfUnitsPeriod${periodShortname}${resetChangesCount}`}
                             onValueUpdated={(value) => onValueChange(`periods[${periodIndex}].number_of_units`, value)}
                         />
                     </div>
@@ -254,7 +223,7 @@ const TransitSchedulePeriod: React.FC<TransitSchedulePeriodProps> = (props) => {
                     <div className="apptr__form-input-container">
                         <label>{t('transit:transitSchedule:CustomStartAt')}</label>
                         <InputString
-                            id={`formFieldTransitScheduleCustomStartAtPeriod${periodShortname}${scheduleId}`}
+                            id={`formFieldTransitScheduleCustomStartAtPeriod${periodShortname}`}
                             disabled={isFrozen}
                             value={customStartAtStr}
                             onValueUpdated={(value) =>
@@ -265,7 +234,7 @@ const TransitSchedulePeriod: React.FC<TransitSchedulePeriodProps> = (props) => {
                     <div className="apptr__form-input-container">
                         <label>{t('transit:transitSchedule:CustomEndAt')}</label>
                         <InputString
-                            id={`formFieldTransitScheduleCustomEndAtPeriod${periodShortname}${scheduleId}`}
+                            id={`formFieldTransitScheduleCustomEndAtPeriod${periodShortname}`}
                             disabled={isFrozen}
                             value={customEndAtStr}
                             onValueUpdated={(value) =>
@@ -290,17 +259,6 @@ const TransitSchedulePeriod: React.FC<TransitSchedulePeriodProps> = (props) => {
                             )}
                         </div>
                     )}
-                    {isFrozen !== true && tripsCount > 0 && (
-                        <div className="tr__form-buttons-container _left">
-                            <Button
-                                color="red"
-                                icon={faTrash}
-                                iconClass="_icon"
-                                label={t('transit:transitSchedule:RemoveSchedule')}
-                                onClick={handleRemoveSchedule}
-                            />
-                        </div>
-                    )}
                 </div>
                 {tripsCount > 0 && (
                     <div className="tr__form-section">
@@ -320,4 +278,4 @@ const TransitSchedulePeriod: React.FC<TransitSchedulePeriodProps> = (props) => {
     );
 };
 
-export default TransitSchedulePeriod;
+export default TransitScheduleBatchPeriod;

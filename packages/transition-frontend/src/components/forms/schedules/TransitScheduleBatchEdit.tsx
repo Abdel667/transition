@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2025, Polytechnique Montreal and contributors
+ * Copyright 2025, Polytechnique Montreal and contributors
  *
  * This file is licensed under the MIT License.
  * License text available at https://opensource.org/licenses/MIT
@@ -24,23 +24,33 @@ import Schedule from 'transition-common/lib/services/schedules/Schedule';
 import Line from 'transition-common/lib/services/line/Line';
 import TransitSchedulePeriod from './TransitSchedulePeriod';
 
-interface BatchScheduleFormProps {
+interface ScheduleBatchFormProps {
     lines: Line[];
     schedules: Schedule[];
-    /** Services that are available as choices for this schedule (not assigned to other schedules) */
     availableServices: choiceType[];
 }
 
-interface ScheduleFormState extends SaveableObjectState<Schedule> {
+interface ScheduleBatchFormState extends SaveableObjectState<Schedule> {
     scheduleErrors: string[];
 }
 
 
-class TransitBatchScheduleEdit extends SaveableObjectForm<Schedule, BatchScheduleFormProps & WithTranslation, ScheduleFormState> {
+class TransitScheduleBatchEdit extends SaveableObjectForm<Schedule, ScheduleBatchFormProps & WithTranslation, ScheduleBatchFormState> {
     private resetChangesCount = 0;
-
-    constructor(props: BatchScheduleFormProps & WithTranslation) {
+    private selectedServiceId = "";
+    private selectedPeriodsGroup = "";
+    constructor(props: ScheduleBatchFormProps & WithTranslation) {
         super(props);
+        
+        this.state = {
+            object: props.schedules[0], // temporary solution, TODO ScheduleList class, extends Saveable & GenericObject
+            confirmModalDeleteIsOpen: false,
+            confirmModalBackIsOpen: false,
+            formValues: {},
+            selectedObjectName: 'schedules',
+            scheduleErrors: []
+        };
+
     }
 
     // static getDerivedStateFromProps(props: any, state: ScheduleFormState) {
@@ -80,16 +90,18 @@ class TransitBatchScheduleEdit extends SaveableObjectForm<Schedule, BatchSchedul
     onChangeService(toServiceId: string) {
         const lines: Line[] = this.props.lines;
         const schedules: Schedule[] = this.props.schedules;
-
+        this.selectedServiceId = toServiceId;
         schedules.forEach((schedule) => {
             const line = lines.find((line) => { line.getId() === schedule.attributes.line_id }) //on fait quoi si la line est pas trouvée? faut que le traitement soit dans le for each no?
-            schedule.set('service_id', toServiceId);
-            if (schedule.isNew()) {
-                serviceLocator.selectedObjectsManager.setSelection('schedule', [schedules]); // ??
-            } else {
-                line.updateSchedule(schedules);
-                schedule.validate();
-                serviceLocator.selectedObjectsManager.setSelection('schedule', [schedules]); // ???
+            if (line) {
+                schedule.set('service_id', toServiceId);
+                if (schedule.isNew()) {
+                    serviceLocator.selectedObjectsManager.setSelection('schedule', [schedules]); // ??
+                } else {
+                    line.updateSchedule(schedule);
+                    schedule.validate();
+                    serviceLocator.selectedObjectsManager.setSelection('schedule', [schedules]); // ???
+                }
             }
         })
     }
@@ -97,44 +109,47 @@ class TransitBatchScheduleEdit extends SaveableObjectForm<Schedule, BatchSchedul
     onChangePeriodsGroup(periodsGroupShortname: string) {
         const lines: Line[] = this.props.lines;
         const schedules: Schedule[] = this.props.schedules;
-
+        this.selectedPeriodsGroup = periodsGroupShortname
         schedules.forEach((schedule) => {
             const line = lines.find((line) => { line.getId() === schedule.attributes.line_id }) // avant c'était schedule.line_id
-            schedule.set('periods_group_shortname', periodsGroupShortname);
-            if (schedule.isNew()) {
-                serviceLocator.selectedObjectsManager.setSelection('schedule', [schedule]);
-            } else {
-                line.updateSchedule(schedule);
-                schedule.validate();
-                serviceLocator.selectedObjectsManager.setSelection('schedule', [schedule]);
+            if (line) {
+                schedule.set('periods_group_shortname', periodsGroupShortname);
+                if (schedule.isNew()) {
+                    serviceLocator.selectedObjectsManager.setSelection('schedule', [schedule]);
+                } else {
+                    line.updateSchedule(schedule);
+                    schedule.validate();
+                    serviceLocator.selectedObjectsManager.setSelection('schedule', [schedule]);
+                }
             }
-            
+
         })
     }
 
-    onSave = async () => { // en attente fonction d'abdel
-        const line = this.props.line;
-        const isFrozen = line.isFrozen();
-        const schedule = this.props.schedule;
+    onSave = () => { // en attente fonction d'abdel
+        const lines = this.props.lines;
+        const schedules = this.props.schedules;
         // save
-        if (isFrozen === true) {
-            serviceLocator.selectedObjectsManager.deselect('schedule');
-            return true;
-        }
-        schedule.validate();
-        if (schedule.isValid) {
-            serviceLocator.eventManager.emit('progress', { name: 'SavingSchedule', progress: 0.0 });
-            try {
-                await schedule.save(serviceLocator.socketEventManager);
-                line.updateSchedule(schedule);
-                serviceLocator.selectedObjectsManager.setSelection('line', [line]);
-                serviceLocator.selectedObjectsManager.deselect('schedule');
-            } finally {
-                serviceLocator.eventManager.emit('progress', { name: 'SavingSchedule', progress: 1.0 });
+
+        schedules.forEach(async (schedule) => {
+            schedule.validate();
+            if (schedule.isValid) {
+                const line = lines.find((line) => { line.getId() === schedule.attributes.line_id })
+                if (line) {
+                    serviceLocator.eventManager.emit('progress', { name: 'SavingSchedule', progress: 0.0 });
+                    try {
+                        await schedule.save(serviceLocator.socketEventManager);
+                        line.updateSchedule(schedule);
+                        // serviceLocator.selectedObjectsManager.setSelection('line', [line]);
+                        // serviceLocator.selectedObjectsManager.deselect('schedule');
+                    } finally {
+                        serviceLocator.eventManager.emit('progress', { name: 'SavingSchedule', progress: 1.0 });
+                    }
+                }
+            } else {
+                //serviceLocator.selectedObjectsManager.setSelection('schedule', [schedule]);
             }
-        } else {
-            serviceLocator.selectedObjectsManager.setSelection('schedule', [schedule]);
-        }
+        })
     };
 
     //TODO tout ce qu'il y a en bas
@@ -143,8 +158,7 @@ class TransitBatchScheduleEdit extends SaveableObjectForm<Schedule, BatchSchedul
         // const line = this.props.line;
         const lines = this.props.lines
         // const isFrozen = line.isFrozen();
-        line.refreshPaths();
-        const paths = line.paths;
+        // line.refreshPaths();
         const outboundPathIds: string[] = [];
         // const outboundPathsChoices: choiceType[] = [];
         const inboundPathIds: string[] = [];
@@ -156,7 +170,12 @@ class TransitBatchScheduleEdit extends SaveableObjectForm<Schedule, BatchSchedul
         const allowSecondsBasedSchedules = schedules[0].attributes.allow_seconds_based_schedules || false;
 
         //TODO Ajouter la logique pour choisir les paths par défaut
-        
+
+        lines.forEach(line => {
+            const paths = line.paths
+
+        });
+
         // for (let i = 0, count = paths.length; i < count; i++) {
         //     const path = paths[i];
         //     if (['outbound', 'loop', 'other'].includes(path.attributes.direction)) {
@@ -179,7 +198,7 @@ class TransitBatchScheduleEdit extends SaveableObjectForm<Schedule, BatchSchedul
         // }
 
         const periodsGroups = Preferences.get('transit.periods');
-        // const periodsGroupShortname = schedule.attributes.periods_group_shortname || '';pas sure sure 
+        // // const periodsGroupShortname = schedule.attributes.periods_group_shortname || '';pas sure sure 
         const periodsGroupShortname = schedules[0].attributes.periods_group_shortname || '';
 
         const periodsGroup = periodsGroupShortname ? periodsGroups[periodsGroupShortname] : null;
@@ -191,60 +210,57 @@ class TransitBatchScheduleEdit extends SaveableObjectForm<Schedule, BatchSchedul
             };
         });
 
-        const periodsForms: any[] = [];
-        // TODO Extract the period form to sub-classes
-        if (periodsGroupShortname && periodsGroup) {
-            const periods = periodsGroup.periods;
-            if (_isBlank(schedule.get('periods'))) {
-                schedule.attributes.periods = [];
-            }
-            for (let i = 0, count = periods.length; i < count; i++) {
-                const period = periods[i];
+        // const periodsForms: any[] = [];
+        // // TODO Extract the period form to sub-classes
+        // if (periodsGroupShortname && periodsGroup) {
+        //     const periods = periodsGroup.periods;
+        //     if (_isBlank(schedule.get('periods'))) {
+        //         schedule.attributes.periods = [];
+        //     }
+        //     for (let i = 0, count = periods.length; i < count; i++) {
+        //         const period = periods[i];
 
-                const periodShortname = period.shortname;
+        //         const periodShortname = period.shortname;
 
-                const schedulePeriod = schedule.attributes.periods[i] || {
-                    period_shortname: periodShortname,
-                    start_at_hour: period.startAtHour,
-                    end_at_hour: period.endAtHour
-                };
-                schedule.attributes.periods[i] = schedulePeriod;
+        //         const schedulePeriod = schedule.attributes.periods[i] || {
+        //             period_shortname: periodShortname,
+        //             start_at_hour: period.startAtHour,
+        //             end_at_hour: period.endAtHour
+        //         };
+        //         schedule.attributes.periods[i] = schedulePeriod;
 
-                periodsForms.push(
-                    <TransitSchedulePeriod
-                        key={`period_form_${periodShortname}`}
-                        schedule={schedule}
-                        line={line}
-                        periodIndex={i}
-                        period={period}
-                        schedulePeriod={schedulePeriod}
-                        outboundPathsChoices={outboundPathsChoices}
-                        inboundPathsChoices={inboundPathsChoices}
-                        outboundPathIds={outboundPathIds}
-                        inboundPathIds={inboundPathIds}
-                        isFrozen={isFrozen}
-                        scheduleId={scheduleId}
-                        allowSecondsBasedSchedules={allowSecondsBasedSchedules}
-                        resetChangesCount={this.resetChangesCount}
-                        onValueChange={this.onValueChange}
-                    />
-                );
-            }
-        }
+        //         periodsForms.push(
+        //             <TransitScheduleBatchPeriod
+        //                 key={`period_form_${periodShortname}`}
+        //                 schedules={schedule}
+        //                 line={line}
+        //                 periodIndex={i}
+        //                 period={period}
+        //                 schedulePeriod={schedulePeriod}
+        //                 outboundPathIds={outboundPathIds}
+        //                 inboundPathIds={inboundPathIds}
+        //                 isFrozen={isFrozen}
+        //                 scheduleId={scheduleId}
+        //                 allowSecondsBasedSchedules={allowSecondsBasedSchedules}
+        //                 resetChangesCount={this.resetChangesCount}
+        //                 onValueChange={this.onValueChange}
+        //             />
+        //         );
+        //     }
+        // }
 
         return (
             <form
-                key={`tr__form-transit-schedule__id_${scheduleId}`}
-                id={`tr__form-transit-schedule__id_${scheduleId}`}
+                key={`tr__form-transit-schedule-batch`}
+                id={`tr__form-transit-schedule-batch`}
                 className="tr__form-transit-schedule apptr__form"
             >
                 <div className="tr__form-section">
                     <div className="apptr__form-input-container _two-columns">
                         <label>{this.props.t('transit:transitSchedule:Service')}</label>
                         <InputSelect
-                            disabled={isFrozen}
-                            id={`formFieldTransitScheduleService${scheduleId}`}
-                            value={schedule.attributes.service_id}
+                            id={`formFieldTransitScheduleBatchService`}
+                            value={this.selectedServiceId}
                             choices={this.props.availableServices}
                             t={this.props.t}
                             onValueChange={(e) => this.onChangeService(e.target.value)}
@@ -253,10 +269,9 @@ class TransitBatchScheduleEdit extends SaveableObjectForm<Schedule, BatchSchedul
                     <div className="apptr__form-input-container _two-columns">
                         <label>{this.props.t('transit:transitSchedule:PeriodsGroup')}</label>
                         <InputSelect
-                            id={`formFieldTransitSchedulePeriodsGroup${scheduleId}`}
-                            value={schedule.attributes.periods_group_shortname}
+                            id={`formFieldTransitScheduleBatchPeriodsGroup`}
+                            value={this.selectedPeriodsGroup}
                             choices={periodsGroupChoices}
-                            disabled={isFrozen}
                             t={this.props.t}
                             onValueChange={(e) => this.onChangePeriodsGroup(e.target.value)}
                         />
@@ -264,9 +279,8 @@ class TransitBatchScheduleEdit extends SaveableObjectForm<Schedule, BatchSchedul
                     <div className="apptr__form-input-container _two-columns">
                         <label>{this.props.t('transit:transitSchedule:AllowSecondsBasedSchedules')}</label>
                         <InputRadio
-                            id={`formFieldTransitSchedulePeriodsGroup${scheduleId}`}
+                            id={`formFieldTransitSchedulePeriodsGroup`}
                             value={allowSecondsBasedSchedules}
-                            disabled={isFrozen}
                             sameLine={true}
                             choices={[
                                 {
@@ -286,7 +300,7 @@ class TransitBatchScheduleEdit extends SaveableObjectForm<Schedule, BatchSchedul
                     </div>
                 </div>
 
-                <FormErrors errors={schedule.errors} />
+                <FormErrors errors={schedules[0].errors} />
                 {this.hasInvalidFields() && <FormErrors errors={['main:errors:InvalidFormFields']} />}
 
                 {this.state.confirmModalDeleteIsOpen && (
@@ -322,39 +336,39 @@ class TransitBatchScheduleEdit extends SaveableObjectForm<Schedule, BatchSchedul
                             icon={faArrowLeft}
                             iconClass="_icon-alone"
                             label=""
-                            onClick={schedule.hasChanged() ? this.openBackConfirmModal : this.onBack}
+                            onClick={schedules[0].hasChanged() ? this.openBackConfirmModal : this.onBack}
                         />
                     </span>
-                    {isFrozen !== true && (
+                    {(
                         <span title={this.props.t('main:Undo')}>
                             <Button
                                 color="grey"
                                 icon={faUndoAlt}
                                 iconClass="_icon-alone"
                                 label=""
-                                disabled={!schedule.canUndo()}
+                                disabled={!schedules[0].canUndo()} // might need to check all of them
                                 onClick={() => {
-                                    schedule.undo();
+                                    schedules.forEach((schedule) => { schedule.undo() });
                                     this.resetChangesCount++;
-                                    serviceLocator.selectedObjectsManager.setSelection('line', [line]);
-                                    serviceLocator.selectedObjectsManager.setSelection('schedule', [schedule]);
+                                    // serviceLocator.selectedObjectsManager.setSelection('line', [line]);
+                                    // serviceLocator.selectedObjectsManager.setSelection('schedule', [schedule]);
                                 }}
                             />
                         </span>
                     )}
-                    {isFrozen !== true && (
+                    {(
                         <span title={this.props.t('main:Redo')}>
                             <Button
                                 color="grey"
                                 icon={faRedoAlt}
                                 iconClass="_icon-alone"
                                 label=""
-                                disabled={!schedule.canRedo()}
+                                disabled={!schedules[0].canRedo()}
                                 onClick={() => {
-                                    schedule.redo();
+                                    schedules.forEach((schedule) => { schedule.redo() });
                                     this.resetChangesCount++;
-                                    serviceLocator.selectedObjectsManager.setSelection('line', [line]);
-                                    serviceLocator.selectedObjectsManager.setSelection('schedule', [schedule]);
+                                    // serviceLocator.selectedObjectsManager.setSelection('line', [line]);
+                                    // serviceLocator.selectedObjectsManager.setSelection('schedule', [schedule]);
                                 }}
                             />
                         </span>
@@ -367,7 +381,7 @@ class TransitBatchScheduleEdit extends SaveableObjectForm<Schedule, BatchSchedul
                             onClick={this.onSave}
                         />
                     </span>
-                    {isFrozen !== true && (
+                    {(
                         <span title={this.props.t('main:Delete')}>
                             <Button
                                 icon={faTrashAlt}
@@ -379,10 +393,10 @@ class TransitBatchScheduleEdit extends SaveableObjectForm<Schedule, BatchSchedul
                         </span>
                     )}
                 </div>
-                <div className="_flex-container-row">{periodsForms}</div>
+                {/* <div className="_flex-container-row">{periodsForms}</div> */}
             </form>
         );
     }
 }
 
-export default withTranslation(['transit', 'main', 'notifications'])(TransitBatchScheduleEdit);
+export default withTranslation(['transit', 'main', 'notifications'])(TransitScheduleBatchEdit);

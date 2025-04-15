@@ -244,14 +244,6 @@ const AgencyPanel: React.FunctionComponent<AgencyPanelProps> = (props: AgencyPan
                     <CollectionDownloadButtons collection={state.pathCollection} />
                 </Collapsible>
             )}
-
-            {state.selectedScheduleMode==="batch" && (
-                <div>
-                    <h1>TEST</h1>
-                </div>
-
-
-            )}
         </div>
     );
 };
