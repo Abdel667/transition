@@ -80,13 +80,12 @@ describe('Service duplication route', () => {
 describe('Schedules update batch route', () => {
 
     test('updateSchedulesBatch with default options', (done) => {
-        
         const originalSchedules = [uuidV4(), uuidV4()];
         const savedSchedules = [Math.floor(Math.random() * 100), Math.floor(Math.random() * 100)];
 
         mockedUpdateBatch.mockResolvedValueOnce(Status.createOk(savedSchedules));
-        console.log('mockedUpdateBatch', mockedUpdateBatch);
-        socketStub.emit('transitSchedule.updateBatch', originalSchedules, (status) => {
+
+        socketStub.emit('transitSchedules.updateBatch', originalSchedules, (status) => {
             expect(Status.isStatusOk(status)).toEqual(true);
             expect(Status.unwrap(status)).toEqual(savedSchedules);
             expect(mockedUpdateBatch).toHaveBeenCalledWith(originalSchedules);
@@ -97,12 +96,12 @@ describe('Schedules update batch route', () => {
 
     test('updateSchedulesBatch where error occurred', (done) => {
         const originalSchedules = [uuidV4(), uuidV4()];
-        mockedDuplicateAndSave.mockResolvedValueOnce(Status.createError('An error occurred'));
+        mockedUpdateBatch.mockResolvedValueOnce(Status.createError('An error occurred'));
 
-        socketStub.emit('transitServices.duplicate', originalSchedules, {}, (status) => {
+        socketStub.emit('transitSchedules.updateBatch', originalSchedules, (status) => {
             expect(Status.isStatusOk(status)).toEqual(false);
             expect(Status.isStatusError(status)).toEqual(true);
-            expect(mockedDuplicateAndSave).toHaveBeenLastCalledWith(originalSchedules, {});
+            expect(mockedUpdateBatch).toHaveBeenLastCalledWith(originalSchedules);
             done();
         });
     });
