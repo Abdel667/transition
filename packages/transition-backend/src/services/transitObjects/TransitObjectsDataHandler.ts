@@ -459,7 +459,7 @@ function createDataHandlers(): Record<string, TransitObjectDataHandler> {
 }
 async function updateSchedulesBatch(attributes: ScheduleAttributes[] ): Promise<Status.Status<number[]>> {
     try {
-        const updatedSchedules = await schedulesDbQueries.batchUpdate(attributes);
+        const updatedSchedules = await schedulesDbQueries.saveAll(attributes);
         return Status.createOk(updatedSchedules);
     } catch (error) {
         console.error('Error batch updating schedules: ', error);
