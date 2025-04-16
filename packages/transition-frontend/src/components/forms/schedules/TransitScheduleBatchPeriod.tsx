@@ -36,11 +36,6 @@ interface TransitScheduleBatchPeriodProps {
     periodIndex: number;
     period: any;
     schedulePeriod: any;
-    outboundPathsChoices: choiceType[];
-    inboundPathsChoices: choiceType[];
-    outboundPathIds: string[];
-    inboundPathIds: string[];
-    isFrozen: boolean;
     allowSecondsBasedSchedules: boolean;
     resetChangesCount: number;
     onValueChange: (path: string, newValue: { value: any }) => void;
@@ -55,7 +50,6 @@ const TransitScheduleBatchPeriod: React.FC<TransitScheduleBatchPeriodProps> = (p
         period,
         schedulePeriod,
         periodIndex,
-        isFrozen,
         allowSecondsBasedSchedules,
         resetChangesCount,
         onValueChange,
@@ -70,6 +64,7 @@ const TransitScheduleBatchPeriod: React.FC<TransitScheduleBatchPeriodProps> = (p
     let chosenOutboundPathId = '';
 
     const trips = schedulePeriod.trips || [];
+    const generatedResponses: any[] = [];
     const tripsCount = trips.length;
 
     // const actualOutboundPathId = schedulePeriod.outbound_path_id;
@@ -119,15 +114,15 @@ const TransitScheduleBatchPeriod: React.FC<TransitScheduleBatchPeriodProps> = (p
         let chosenInboundPath;
         paths.forEach(path => {
             if (['outbound', 'loop', 'other'].includes(path.attributes.direction)) {
-                chosenOutboundPath = !chosenOutboundPath || chosenOutboundPath.countStops() < path.countStops() ? path : chosenOutboundPath
+                chosenOutboundPath = chosenOutboundPath ? (chosenOutboundPath.countStops() < path.countStops() ? path : chosenOutboundPath) : path
             }
-            else if (path.attributes.direction == 'inbound') {
-                chosenInboundPath = !chosenInboundPath || chosenInboundPath.countStops() < path.countStops() ? path : chosenInboundPath
+            else if (path.attributes.direction === 'inbound') {
+                chosenInboundPath = chosenInboundPath ? (chosenInboundPath.countStops() < path.countStops() ? path : chosenInboundPath) : path
             }
         })
         chosenOutboundPathId = chosenOutboundPath ? chosenOutboundPath.getId() : ''
         chosenInboundPathId = chosenInboundPath ? chosenOutboundPath.getId() : ''
-        const schedule = schedules.find((schedule) => { schedule.attributes.line_id === line.getId() })
+        const schedule = schedules.find((schedule) => {return schedule.attributes.line_id === line.getId() })
         if (schedule && chosenOutboundPath) {
             schedule.set(`periods[${periodIndex}].outbound_path_id`, chosenOutboundPath.getId());
             schedule.set(`periods[${periodIndex}].inbound_path_id`, chosenInboundPath.getId());
@@ -153,7 +148,7 @@ const TransitScheduleBatchPeriod: React.FC<TransitScheduleBatchPeriodProps> = (p
     const handleGenerateSchedule = () => {
 
         lines.forEach(line => {
-            const schedule = schedules.find((schedule) => { schedule.attributes.line_id === line.getId() })
+            const schedule = schedules.find((schedule) => {return schedule.attributes.line_id === line.getId() })
             if (schedule) {
                 // schedule.set(`periods[${periodIndex}].outbound_path_id`, outboundPathId);
                 // schedule.set(`periods[${periodIndex}].inbound_path_id`, inboundPathId);
@@ -161,6 +156,7 @@ const TransitScheduleBatchPeriod: React.FC<TransitScheduleBatchPeriodProps> = (p
                 const response = schedule.generateForPeriod(periodShortname);
                 if (response.trips) {
                     schedule.set(`periods[${periodIndex}].trips`, response.trips);
+                    generatedResponses.push(response)
                 }
             }
             //serviceLocator.selectedObjectsManager.setSelection('schedule', [schedule]);
@@ -194,7 +190,7 @@ const TransitScheduleBatchPeriod: React.FC<TransitScheduleBatchPeriodProps> = (p
                             <label>{t('transit:transitSchedule:IntervalMinutes')}</label>
                             <InputStringFormatted
                                 id={`formFieldTransitScheduleIntervalMinutesPeriod${periodShortname}`}
-                                disabled={isFrozen}
+                                // disabled={isFrozen}
                                 value={intervalSeconds}
                                 onValueUpdated={(value) =>
                                     onValueChange(`periods[${periodIndex}].interval_seconds`, value)
@@ -210,7 +206,7 @@ const TransitScheduleBatchPeriod: React.FC<TransitScheduleBatchPeriodProps> = (p
                             <label>{t('transit:transitSchedule:IntervalSeconds')}</label>
                             <InputStringFormatted
                                 id={`formFieldTransitScheduleIntervalSecondsPeriod${periodShortname}`}
-                                disabled={isFrozen}
+                                // disabled={isFrozen}
                                 value={intervalSeconds}
                                 stringToValue={_toInteger}
                                 valueToString={_toString}
@@ -232,7 +228,7 @@ const TransitScheduleBatchPeriod: React.FC<TransitScheduleBatchPeriodProps> = (p
                         <label>{t('transit:transitSchedule:NumberOfUnits')}</label>
                         <InputStringFormatted
                             id={`formFieldTransitScheduleNumberOfUnitsPeriod${periodShortname}`}
-                            disabled={isFrozen}
+                            // disabled={isFrozen}
                             value={numberOfUnits}
                             stringToValue={_toInteger}
                             valueToString={_toString}
@@ -251,7 +247,7 @@ const TransitScheduleBatchPeriod: React.FC<TransitScheduleBatchPeriodProps> = (p
                         <label>{t('transit:transitSchedule:CustomStartAt')}</label>
                         <InputString
                             id={`formFieldTransitScheduleCustomStartAtPeriod${periodShortname}`}
-                            disabled={isFrozen}
+                            // disabled={isFrozen}
                             value={customStartAtStr}
                             onValueUpdated={(value) =>
                                 onValueChange(`periods[${periodIndex}].custom_start_at_str`, value)
@@ -262,7 +258,7 @@ const TransitScheduleBatchPeriod: React.FC<TransitScheduleBatchPeriodProps> = (p
                         <label>{t('transit:transitSchedule:CustomEndAt')}</label>
                         <InputString
                             id={`formFieldTransitScheduleCustomEndAtPeriod${periodShortname}`}
-                            disabled={isFrozen}
+                            // disabled={isFrozen}
                             value={customEndAtStr}
                             onValueUpdated={(value) =>
                                 onValueChange(`periods[${periodIndex}].custom_end_at_str`, value)
@@ -271,7 +267,8 @@ const TransitScheduleBatchPeriod: React.FC<TransitScheduleBatchPeriodProps> = (p
                     </div>
                 </div>
                 <div className="tr__form-section">
-                    {isFrozen !== true && (
+                    {/* {isFrozen !== true && ( */}
+                    {(
                         <div className="tr__form-buttons-container _left">
                             {!_isBlank(chosenOutboundPathId) &&
                                 ((!_isBlank(intervalSeconds) && _isBlank(numberOfUnits)) ||
@@ -287,19 +284,7 @@ const TransitScheduleBatchPeriod: React.FC<TransitScheduleBatchPeriodProps> = (p
                         </div>
                     )}
                 </div>
-                {/* {tripsCount > 0 && (
-                    <div className="tr__form-section">
-                        <table className="_schedule">
-                            <tbody>
-                                <tr>
-                                    <th>{t('transit:transitPath:directions:outbound')}</th>
-                                    <th>{t('transit:transitPath:directions:inbound')}</th>
-                                </tr>
-                                {tripRows}
-                            </tbody>
-                        </table>
-                    </div>
-                )} */}
+                {generatedResponses.length > 0 && <span>{generatedResponses.length} horaires générés avec succès</span>}
             </div>
         </div>
     );

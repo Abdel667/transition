@@ -22,7 +22,7 @@ import { _isBlank } from 'chaire-lib-common/lib/utils/LodashExtensions';
 import ConfirmModal from 'chaire-lib-frontend/lib/components/modal/ConfirmModal';
 import Schedule from 'transition-common/lib/services/schedules/Schedule';
 import Line from 'transition-common/lib/services/line/Line';
-import TransitSchedulePeriod from './TransitSchedulePeriod';
+import TransitScheduleBatchPeriod from './TransitScheduleBatchPeriod';
 
 interface ScheduleBatchFormProps {
     lines: Line[];
@@ -41,14 +41,14 @@ class TransitScheduleBatchEdit extends SaveableObjectForm<Schedule, ScheduleBatc
     private selectedPeriodsGroup = "";
     constructor(props: ScheduleBatchFormProps & WithTranslation) {
         super(props);
-        
+
         this.state = {
             object: props.schedules[0], // temporary solution, TODO ScheduleList class, extends Saveable & GenericObject
             confirmModalDeleteIsOpen: false,
             confirmModalBackIsOpen: false,
             formValues: {},
             selectedObjectName: 'schedules',
-            scheduleErrors: []
+            scheduleErrors: [],
         };
 
     }
@@ -87,20 +87,20 @@ class TransitScheduleBatchEdit extends SaveableObjectForm<Schedule, ScheduleBatc
     //     }
     // }
 
-    onChangeService(toServiceId: string) {
+    onChangeService( toServiceId: string) {
         const lines: Line[] = this.props.lines;
         const schedules: Schedule[] = this.props.schedules;
         this.selectedServiceId = toServiceId;
         schedules.forEach((schedule) => {
-            const line = lines.find((line) => { line.getId() === schedule.attributes.line_id }) //on fait quoi si la line est pas trouvée? faut que le traitement soit dans le for each no?
+            const line = lines.find((line) => {return line.getId() === schedule.attributes.line_id })
             if (line) {
                 schedule.set('service_id', toServiceId);
                 if (schedule.isNew()) {
-                    serviceLocator.selectedObjectsManager.setSelection('schedule', [schedules]); // ??
+                    serviceLocator.selectedObjectsManager.setSelection('schedule', schedules); // ??
                 } else {
                     line.updateSchedule(schedule);
                     schedule.validate();
-                    serviceLocator.selectedObjectsManager.setSelection('schedule', [schedules]); // ???
+                    serviceLocator.selectedObjectsManager.setSelection('schedule', schedules); // ???
                 }
             }
         })
@@ -111,7 +111,7 @@ class TransitScheduleBatchEdit extends SaveableObjectForm<Schedule, ScheduleBatc
         const schedules: Schedule[] = this.props.schedules;
         this.selectedPeriodsGroup = periodsGroupShortname
         schedules.forEach((schedule) => {
-            const line = lines.find((line) => { line.getId() === schedule.attributes.line_id }) // avant c'était schedule.line_id
+            const line = lines.find((line) => {return line.getId() === schedule.attributes.line_id })
             if (line) {
                 schedule.set('periods_group_shortname', periodsGroupShortname);
                 if (schedule.isNew()) {
@@ -134,7 +134,7 @@ class TransitScheduleBatchEdit extends SaveableObjectForm<Schedule, ScheduleBatc
         schedules.forEach(async (schedule) => {
             schedule.validate();
             if (schedule.isValid) {
-                const line = lines.find((line) => { line.getId() === schedule.attributes.line_id })
+                const line = lines.find((line) => {return line.getId() === schedule.attributes.line_id })
                 if (line) {
                     serviceLocator.eventManager.emit('progress', { name: 'SavingSchedule', progress: 0.0 });
                     try {
@@ -169,31 +169,9 @@ class TransitScheduleBatchEdit extends SaveableObjectForm<Schedule, ScheduleBatc
         // const allowSecondsBasedSchedules = schedule.attributes.allow_seconds_based_schedules || false;
         const allowSecondsBasedSchedules = schedules[0].attributes.allow_seconds_based_schedules || false;
 
-        //TODO Ajouter la logique pour choisir les paths par défaut
-
-        // for (let i = 0, count = paths.length; i < count; i++) {
-        //     const path = paths[i];
-        //     if (['outbound', 'loop', 'other'].includes(path.attributes.direction)) {
-        //         outboundPathIds.push(path.getId());
-        //         outboundPathsChoices.push({
-        //             value: path.getId(),
-        //             label: `${path.toString(false)} (${this.props.t(
-        //                 'transit:transitPath:directions:' + path.getAttributes().direction
-        //             )})`
-        //         });
-        //     } else if (path.get('direction') === 'inbound') {
-        //         inboundPathIds.push(path.getId());
-        //         inboundPathsChoices.push({
-        //             value: path.getId(),
-        //             label: `${path.toString(false)} (${this.props.t(
-        //                 'transit:transitPath:directions:' + path.getAttributes().direction
-        //             )})`
-        //         });
-        //     }
-        // }
 
         const periodsGroups = Preferences.get('transit.periods');
-        // // const periodsGroupShortname = schedule.attributes.periods_group_shortname || '';pas sure sure 
+        // // const periodsGroupShortname = schedule.attributes.periods_group_shortname || '';pas sure sure
         const periodsGroupShortname = schedules[0].attributes.periods_group_shortname || '';
 
         const periodsGroup = periodsGroupShortname ? periodsGroups[periodsGroupShortname] : null;
@@ -205,44 +183,44 @@ class TransitScheduleBatchEdit extends SaveableObjectForm<Schedule, ScheduleBatc
             };
         });
 
-        // const periodsForms: any[] = [];
-        // // TODO Extract the period form to sub-classes
-        // if (periodsGroupShortname && periodsGroup) {
-        //     const periods = periodsGroup.periods;
-        //     if (_isBlank(schedule.get('periods'))) {
-        //         schedule.attributes.periods = [];
-        //     }
-        //     for (let i = 0, count = periods.length; i < count; i++) {
-        //         const period = periods[i];
+        const periodsForms: any[] = [];
+        // TODO Extract the period form to sub-classes
+        if (periodsGroupShortname && periodsGroup) {
+            const periods = periodsGroup.periods;
+            schedules.forEach((schedule) => {
+                if (_isBlank(schedule.get('periods'))) {
+                    schedule.attributes.periods = [];
+                }
+            })
+            for (let i = 0, count = periods.length; i < count; i++) {
+                const period = periods[i];
 
-        //         const periodShortname = period.shortname;
+                const periodShortname = period.shortname;
+                const schedulePeriod = schedules[0].attributes.periods[i] || {
+                    period_shortname: periodShortname,
+                    start_at_hour: period.startAtHour,
+                    end_at_hour: period.endAtHour
+                };
 
-        //         const schedulePeriod = schedule.attributes.periods[i] || {
-        //             period_shortname: periodShortname,
-        //             start_at_hour: period.startAtHour,
-        //             end_at_hour: period.endAtHour
-        //         };
-        //         schedule.attributes.periods[i] = schedulePeriod;
+                schedules.forEach((schedule) => {
+                    schedule.attributes.periods[i] = schedulePeriod;
+                })
 
-        //         periodsForms.push(
-        //             <TransitScheduleBatchPeriod
-        //                 key={`period_form_${periodShortname}`}
-        //                 schedules={schedule}
-        //                 line={line}
-        //                 periodIndex={i}
-        //                 period={period}
-        //                 schedulePeriod={schedulePeriod}
-        //                 outboundPathIds={outboundPathIds}
-        //                 inboundPathIds={inboundPathIds}
-        //                 isFrozen={isFrozen}
-        //                 scheduleId={scheduleId}
-        //                 allowSecondsBasedSchedules={allowSecondsBasedSchedules}
-        //                 resetChangesCount={this.resetChangesCount}
-        //                 onValueChange={this.onValueChange}
-        //             />
-        //         );
-        //     }
-        // }
+                periodsForms.push(
+                    <TransitScheduleBatchPeriod
+                        key={`period_form_${periodShortname}`}
+                        schedules={schedules}
+                        lines={lines}
+                        periodIndex={i}
+                        period={period}
+                        schedulePeriod={schedulePeriod}
+                        allowSecondsBasedSchedules={allowSecondsBasedSchedules}
+                        resetChangesCount={this.resetChangesCount}
+                        onValueChange={this.onValueChange}
+                    />
+                );
+            }
+        }
 
         return (
             <form
@@ -255,7 +233,7 @@ class TransitScheduleBatchEdit extends SaveableObjectForm<Schedule, ScheduleBatc
                         <label>{this.props.t('transit:transitSchedule:Service')}</label>
                         <InputSelect
                             id={`formFieldTransitScheduleBatchService`}
-                            value={this.selectedServiceId}
+                            value={schedules[0].attributes.service_id}
                             choices={this.props.availableServices}
                             t={this.props.t}
                             onValueChange={(e) => this.onChangeService(e.target.value)}
@@ -265,7 +243,8 @@ class TransitScheduleBatchEdit extends SaveableObjectForm<Schedule, ScheduleBatc
                         <label>{this.props.t('transit:transitSchedule:PeriodsGroup')}</label>
                         <InputSelect
                             id={`formFieldTransitScheduleBatchPeriodsGroup`}
-                            value={this.selectedPeriodsGroup}
+                            //value={this.selectedPeriodsGroup}
+                            value={schedules[0].attributes.periods_group_shortname}
                             choices={periodsGroupChoices}
                             t={this.props.t}
                             onValueChange={(e) => this.onChangePeriodsGroup(e.target.value)}
@@ -376,7 +355,7 @@ class TransitScheduleBatchEdit extends SaveableObjectForm<Schedule, ScheduleBatc
                             onClick={this.onSave}
                         />
                     </span>
-                    {(
+                    {/* {(
                         <span title={this.props.t('main:Delete')}>
                             <Button
                                 icon={faTrashAlt}
@@ -386,9 +365,9 @@ class TransitScheduleBatchEdit extends SaveableObjectForm<Schedule, ScheduleBatc
                                 onClick={this.openDeleteConfirmModal}
                             />
                         </span>
-                    )}
+                    )} */}
                 </div>
-                {/* <div className="_flex-container-row">{periodsForms}</div> */}
+                <div className="_flex-container-row">{periodsForms}</div>
             </form>
         );
     }
