@@ -64,7 +64,8 @@ const TransitScheduleBatchPeriod: React.FC<TransitScheduleBatchPeriodProps> = (p
     let chosenOutboundPathId = '';
 
     const trips = schedulePeriod.trips || [];
-    const generatedResponses: any[] = [];
+    const [generatedResponses, setGeneratedResponses] = React.useState<any[]>([])
+    //const generatedResponses: any[] = [];
     const tripsCount = trips.length;
 
     // const actualOutboundPathId = schedulePeriod.outbound_path_id;
@@ -146,7 +147,7 @@ const TransitScheduleBatchPeriod: React.FC<TransitScheduleBatchPeriodProps> = (p
     /* */
 
     const handleGenerateSchedule = () => {
-
+        const generatedResponsesTemp: any[] = []
         lines.forEach(line => {
             const schedule = schedules.find((schedule) => {return schedule.attributes.line_id === line.getId() })
             if (schedule) {
@@ -156,12 +157,12 @@ const TransitScheduleBatchPeriod: React.FC<TransitScheduleBatchPeriodProps> = (p
                 const response = schedule.generateForPeriod(periodShortname);
                 if (response.trips) {
                     schedule.set(`periods[${periodIndex}].trips`, response.trips);
-                    generatedResponses.push(response)
+                    generatedResponsesTemp.push(response)
                 }
             }
             //serviceLocator.selectedObjectsManager.setSelection('schedule', [schedule]);
-
         });
+        setGeneratedResponses(generatedResponsesTemp)
     };
 
 
