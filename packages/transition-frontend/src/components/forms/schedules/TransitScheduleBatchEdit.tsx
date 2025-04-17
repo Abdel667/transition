@@ -23,7 +23,7 @@ import ConfirmModal from 'chaire-lib-frontend/lib/components/modal/ConfirmModal'
 import Schedule from 'transition-common/lib/services/schedules/Schedule';
 import Line from 'transition-common/lib/services/line/Line';
 import TransitScheduleBatchPeriod from './TransitScheduleBatchPeriod';
-import saveUtils from 'chaire-lib-common/src/services/objects/SaveUtils'
+import SaveUtils from 'chaire-lib-common/lib/services/objects/SaveUtils';
 
 interface ScheduleBatchFormProps {
     lines: Line[];
@@ -52,6 +52,27 @@ class TransitScheduleBatchEdit extends SaveableObjectForm<Schedule, ScheduleBatc
             scheduleErrors: [],
         };
 
+    }
+
+    // Helper method to validate multiple schedules
+    private getValidSchedulesWithLines(schedules, lines) {
+        const validSchedules:Schedule[] = [];
+        const scheduleLineMap = new Map();
+
+        schedules.forEach((schedule) => {
+            schedule.validate();
+            if (schedule.isValid) {
+                const line = lines.find(line => line.getId() === schedule.attributes.line_id);
+                if (line) {
+                    validSchedules.push(schedule);
+                    scheduleLineMap.set(schedule, line);
+                }
+            } else {
+                console.log("schedule invalid");
+            }
+        });
+
+        return { validSchedules, scheduleLineMap };
     }
 
     // static getDerivedStateFromProps(props: any, state: ScheduleFormState) {
@@ -148,36 +169,47 @@ class TransitScheduleBatchEdit extends SaveableObjectForm<Schedule, ScheduleBatc
         const schedules = this.props.schedules;
         // save
 
-        schedules.forEach(async (schedule) => {
-            schedule.validate();
-            if (schedule.isValid) {
-                const line = lines.find((line) => { return line.getId() === schedule.attributes.line_id })
-                if (line) {
-                    serviceLocator.eventManager.emit('progress', { name: 'SavingSchedule', progress: 0.0 });
-                    serviceLocator.selectedObjectsManager.deselect('schedule');
-                    try {
-                        if (line.attributes.service_ids && line.attributes.service_ids.includes(schedule.attributes.service_id)){
-                        }
-                        await schedule.save(serviceLocator.socketEventManager)
-                        line.updateSchedule(schedule)
-                    } finally {
-                        serviceLocator.eventManager.emit('progress', { name: 'SavingSchedule', progress: 1.0 });
+        // schedules.forEach(async (schedule) => {
+        //     schedule.validate();
+        //     if (schedule.isValid) {
+        //         const line = lines.find((line) => { return line.getId() === schedule.attributes.line_id })
+        //         if (line) {
+        //             serviceLocator.eventManager.emit('progress', { name: 'SavingSchedule', progress: 0.0 });
+        //             serviceLocator.selectedObjectsManager.deselect('schedule');
+        //             try {
+        //                 if (line.attributes.service_ids && line.attributes.service_ids.includes(schedule.attributes.service_id)){
+        //                 }
+        //                 await schedule.save(serviceLocator.socketEventManager)
+        //                 line.updateSchedule(schedule)
+        //             } finally {
+        //                 serviceLocator.eventManager.emit('progress', { name: 'SavingSchedule', progress: 1.0 });
+        //             }
+        //         }
+        //     } else {
+        //         //serviceLocator.selectedObjectsManager.setSelection('schedule', [schedule]);
+        //         console.log("schedule invalid")
+        //     }
+        // })
+        
+        const { validSchedules, scheduleLineMap } = this.getValidSchedulesWithLines(schedules, lines);
+
+        if (validSchedules.length > 0) {
+            serviceLocator.eventManager.emit('progress', { name: 'SavingSchedule', progress: 0.0 });
+            serviceLocator.selectedObjectsManager.deselect('schedule');
+
+            try {
+                await SaveUtils.saveAll(validSchedules, serviceLocator.socketEventManager, undefined);
+
+                validSchedules.forEach(schedule => {
+                    const line = scheduleLineMap.get(schedule);
+                    if (line) {
+                        line.updateSchedule(schedule);
                     }
-                }
-            } else {
-                //serviceLocator.selectedObjectsManager.setSelection('schedule', [schedule]);
-                console.log("schedule invalid")
+                });
+            } finally {
+                serviceLocator.eventManager.emit('progress', { name: 'SavingSchedule', progress: 1.0 });
             }
-        })
-        // serviceLocator.eventManager.emit('progress', { name: 'SavingSchedule', progress: 0.0 });
-        // try {
-        //     await saveUtils.saveAll<Schedule>(schedules, serviceLocator.socketEventManager, "transitSchedules", undefined);
-        //     line.updateSchedule(schedule);
-        //     // serviceLocator.selectedObjectsManager.setSelection('line', [line]);
-        //     // serviceLocator.selectedObjectsManager.deselect('schedule');
-        // } finally {
-        //     serviceLocator.eventManager.emit('progress', { name: 'SavingSchedule', progress: 1.0 });
-        // }
+}
     };
 
     //TODO tout ce qu'il y a en bas
