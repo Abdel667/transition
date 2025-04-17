@@ -114,14 +114,17 @@ class TransitScheduleBatchEdit extends SaveableObjectForm<Schedule, ScheduleBatc
         const schedules: Schedule[] = this.props.schedules;
         this.selectedServiceId = toServiceId;
         let alreadyHasServiceLines = 0;
-        schedules.forEach((schedule) => {
-            const line = lines.find((line) => { return line.getId() === schedule.attributes.line_id })
+        schedules.forEach((schedule, index) => {
+            const line = lines.find((line) => line.getId() === schedule.attributes.line_id )
             if (line) {
                 if (line.attributes.service_ids && line.attributes.service_ids.includes(toServiceId)) {
-
+                    schedule = new Schedule({line: line.getId(), service_id:toServiceId}, false, serviceLocator.collectionManager)
                     alreadyHasServiceLines++;
                 }
-                schedule.set('service_id', toServiceId);
+                else {
+                    schedule = new Schedule({line: line.getId(), service_id:toServiceId}, true, serviceLocator.collectionManager)
+                }
+                schedules[index].set('service_id', toServiceId);
                 if (schedule.isNew()) {
                     serviceLocator.selectedObjectsManager.setSelection('schedule', schedules); // ??
                 } else {
@@ -135,10 +138,8 @@ class TransitScheduleBatchEdit extends SaveableObjectForm<Schedule, ScheduleBatc
         if (alreadyHasServiceLines > 0) {
             if (alreadyHasServiceLines === 1) {
                 schedules[0].errors.push(alreadyHasServiceLines + " line already has a schedule for this service, it will be overritten");
-                console.log("already has one");
             }
             else {
-                console.log("already has many");
                 schedules[0].errors.push(alreadyHasServiceLines + " lines already have a schedule for this service, they will be overritten");
             }
         }
@@ -149,7 +150,7 @@ class TransitScheduleBatchEdit extends SaveableObjectForm<Schedule, ScheduleBatc
         const schedules: Schedule[] = this.props.schedules;
         this.selectedPeriodsGroup = periodsGroupShortname
         schedules.forEach((schedule) => {
-            const line = lines.find((line) => { return line.getId() === schedule.attributes.line_id })
+            const line = lines.find((line) => line.getId() === schedule.attributes.line_id )
             if (line) {
                 schedule.set('periods_group_shortname', periodsGroupShortname);
                 if (schedule.isNew()) {
@@ -161,7 +162,7 @@ class TransitScheduleBatchEdit extends SaveableObjectForm<Schedule, ScheduleBatc
                 }
             }
 
-        })
+        });
     }
 
     onSave = async () => { // en attente fonction d'abdel

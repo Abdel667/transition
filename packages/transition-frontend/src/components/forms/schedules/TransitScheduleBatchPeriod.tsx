@@ -123,7 +123,7 @@ const TransitScheduleBatchPeriod: React.FC<TransitScheduleBatchPeriodProps> = (p
         })
         chosenOutboundPathId = chosenOutboundPath ? chosenOutboundPath.getId() : ''
         chosenInboundPathId = chosenInboundPath ? chosenOutboundPath.getId() : ''
-        const schedule = schedules.find((schedule) => {return schedule.attributes.line_id === line.getId() })
+        const schedule = schedules.find((schedule) => schedule.attributes.line_id === line.getId())
         if (schedule && chosenOutboundPath) {
             schedule.set(`periods[${periodIndex}].outbound_path_id`, chosenOutboundPath.getId());
             schedule.set(`periods[${periodIndex}].inbound_path_id`, chosenInboundPath.getId());
@@ -155,7 +155,6 @@ const TransitScheduleBatchPeriod: React.FC<TransitScheduleBatchPeriodProps> = (p
                 // schedule.set(`periods[${periodIndex}].inbound_path_id`, inboundPathId);
 
                 const response = schedule.generateForPeriod(periodShortname);
-                console.log(response)
                 if (response.trips) {
                     schedule.set(`periods[${periodIndex}].trips`, response.trips);
                     generatedResponsesTemp.push(response)
