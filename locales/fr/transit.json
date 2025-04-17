@@ -200,7 +200,9 @@
         "PeriodsGroup": "Groupe de périodes",
         "PeriodsGroups": "Groupes de périodes",
         "nTrip": "{{n}} voyage",
-        "nTrips": "{{n}} voyages"
+        "nTrips": "{{n}} voyages",
+        "BatchGenerationSuccess": "{{n}} horaires ont été générés avec succès",
+        "OverwriteScheduleWarningBatch": "Attention: {{n}} ligne(s) ont déjà un horaire associé à ce service. L'horaire existant sera écrasé."
     },
     "transitUnit": {
         "List": "Unités",

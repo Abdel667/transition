@@ -285,7 +285,7 @@ const TransitScheduleBatchPeriod: React.FC<TransitScheduleBatchPeriodProps> = (p
                         </div>
                     )}
                 </div>
-                {generatedResponses.length > 0 && <span>{generatedResponses.length} horaires générés avec succès</span>}
+                {generatedResponses.length > 0 && <span> {t('transit:transitSchedule:BatchGenerationSuccess', { n: generatedResponses.length })} </span>}
             </div>
         </div>
     );

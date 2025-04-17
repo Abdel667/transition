@@ -136,12 +136,7 @@ class TransitScheduleBatchEdit extends SaveableObjectForm<Schedule, ScheduleBatc
         })
         schedules[0].errors = []
         if (alreadyHasServiceLines > 0) {
-            if (alreadyHasServiceLines === 1) {
-                schedules[0].errors.push(alreadyHasServiceLines + " line already has a schedule for this service, it will be overritten");
-            }
-            else {
-                schedules[0].errors.push(alreadyHasServiceLines + " lines already have a schedule for this service, they will be overritten");
-            }
+            schedules[0].errors.push(this.props.t('transit:transitSchedule:OverwriteScheduleWarningBatch', { n: alreadyHasServiceLines }));
         }
     }
 

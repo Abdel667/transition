@@ -200,7 +200,9 @@
         "PeriodsGroup": "Periods group",
         "PeriodsGroups": "Periods groups",
         "nTrip": "{{n}} trip",
-        "nTrips": "{{n}} trips"
+        "nTrips": "{{n}} trips",
+        "BatchGenerationSuccess": "{{n}} schedules were successfully generated",
+        "OverwriteScheduleWarningBatch": "Warning: {{n}} line(s) already have a schedule for this service. The existing schedule will be overwritten."
     },
     "transitUnit": {
         "List": "Units",
