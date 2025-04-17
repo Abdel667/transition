@@ -453,6 +453,7 @@ function createDataHandlers(): Record<string, TransitObjectDataHandler> {
         }
 
         if (lowerCasePlural === 'schedules') {
+            console.log('INITIALISÉ ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////');
             dataHandler.updateBatch = async (socket: EventEmitter, attributeList: GenericAttributes[]): Promise<Record<string, any>> => {
                 try {
                     const updatedIds = await transitClassConfig.dbQueries.saveAll(attributeList);

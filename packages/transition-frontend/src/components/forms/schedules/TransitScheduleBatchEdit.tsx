@@ -55,7 +55,7 @@ class TransitScheduleBatchEdit extends SaveableObjectForm<Schedule, ScheduleBatc
     }
 
     // Helper method to validate multiple schedules
-    private getValidSchedulesWithLines(schedules, lines) {
+    private getValidSchedulesWithLines(schedules: Schedule[], lines: Line[]): { validSchedules: Schedule[], scheduleLineMap: Map<Schedule, Line> } {
         const validSchedules:Schedule[] = [];
         const scheduleLineMap = new Map();
 
@@ -166,8 +166,8 @@ class TransitScheduleBatchEdit extends SaveableObjectForm<Schedule, ScheduleBatc
     }
 
     onSave = async () => { // en attente fonction d'abdel
-        const lines = this.props.lines;
-        const schedules = this.props.schedules;
+        const lines : Line[] = this.props.lines;
+        const schedules : Schedule[] = this.props.schedules;
         // save
 
         // schedules.forEach(async (schedule) => {
@@ -199,7 +199,7 @@ class TransitScheduleBatchEdit extends SaveableObjectForm<Schedule, ScheduleBatc
             serviceLocator.selectedObjectsManager.deselect('schedule');
 
             try {
-                await SaveUtils.saveAll(validSchedules, serviceLocator.socketEventManager, undefined);
+                await SaveUtils.saveAll(validSchedules, serviceLocator.socketEventManager, 'transitSchedules', undefined);
 
                 validSchedules.forEach(schedule => {
                     const line = scheduleLineMap.get(schedule);

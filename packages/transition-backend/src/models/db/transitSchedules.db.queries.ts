@@ -402,6 +402,7 @@ const save = async function (scheduleData: ScheduleAttributes, options: { transa
         : await createFromScheduleData(scheduleData, options);
 };
 
+// FIXME Handle a few promises at a time instead of all at once
 const saveAll = async function (schedulesData: ScheduleAttributes[], options: { transaction?: Knex.Transaction } = {}) {
     return await Promise.all(schedulesData.map((scheduleData) => save(scheduleData, options)));
 };

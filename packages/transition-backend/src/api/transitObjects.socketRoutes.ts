@@ -122,7 +122,8 @@ function setupObjectSocketRoutes(socket: EventEmitter) {
         }
 
         // Update multiple objects in the database and cache if required
-        if (lowerCasePlural === 'schedules' && dataHandler.updateBatch) {
+        if (lowerCasePlural === 'schedules') {
+            console.log('//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////');
             socket.on(`transit${dataHandler.classNamePlural}.updateBatch`, async (attributesList, callback) => {
                 try {
                     console.log('Socket updateBatch called with:', attributesList);
