@@ -31,12 +31,11 @@ import * as scenariosCacheQueries from '../../models/capnpCache/transitScenarios
 import * as servicesCacheQueries from '../../models/capnpCache/transitServices.cache.queries';
 
 import { GenericAttributes } from 'chaire-lib-common/lib/utils/objects/GenericObject';
-import { ScheduleAttributes } from 'transition-common/src/services/schedules/Schedule';
 import * as Status from 'chaire-lib-common/lib/utils/Status';
 import TrError from 'chaire-lib-common/lib/utils/TrError';
 import { isSocketIo } from '../../api/socketUtils';
 
-interface TransitObjectDataHandler {
+export interface TransitObjectDataHandler {
     lowerCaseName: string;
     className: string;
     classNamePlural: string;
@@ -454,9 +453,9 @@ function createDataHandlers(): Record<string, TransitObjectDataHandler> {
         }
 
         if (lowerCasePlural === 'schedules') {
-            dataHandler.updateBatch = async (socket: EventEmitter, attributes: GenericAttributes[]): Promise<Record<string, any>> => {
+            dataHandler.updateBatch = async (socket: EventEmitter, attributeList: GenericAttributes[]): Promise<Record<string, any>> => {
                 try {
-                    const updatedIds = await transitClassConfig.dbQueries.saveAll(attributes);
+                    const updatedIds = await transitClassConfig.dbQueries.saveAll(attributeList);
 
                     if (isSocketIo(socket)) {
                         socket.broadcast.emit('data.updated');

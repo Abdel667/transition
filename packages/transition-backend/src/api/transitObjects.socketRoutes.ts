@@ -123,10 +123,15 @@ function setupObjectSocketRoutes(socket: EventEmitter) {
 
         // Update multiple objects in the database and cache if required
         if (lowerCasePlural === 'schedules' && dataHandler.updateBatch) {
-            socket.on(`transit${dataHandler.classNamePlural}.updateBatch`, async (attributes, callback) => {
-                console.log('INSIDE ////////////////////////////////////////////////////////////////////////');
-                const response = await dataHandler.updateBatch!(socket, attributes);
-                callback(response);
+            socket.on(`transit${dataHandler.classNamePlural}.updateBatch`, async (attributesList, callback) => {
+                try {
+                    console.log('INSIDE ////////////////////////////////////////////////////////////////////////');
+                    const response = await dataHandler.updateBatch!(socket, attributesList);
+                    console.log('Success:', response); 
+                    callback(response);
+                } catch (error) {
+                    console.log('Error caught:', error);
+                }
             });
         }
     }

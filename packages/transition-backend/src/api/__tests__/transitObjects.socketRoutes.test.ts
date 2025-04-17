@@ -7,21 +7,52 @@
 import { v4 as uuidV4 } from 'uuid';
 import { EventEmitter } from 'events';
 import * as Status from 'chaire-lib-common/lib/utils/Status';
+import { TransitObjectDataHandler } from '../../services/transitObjects/TransitObjectsDataHandler';
+import TrError from 'chaire-lib-common/lib/utils/TrError';
+
+jest.mock('../../services/transitObjects/transitServices/ServiceDuplicator', () => ({
+    duplicateServices: jest.fn()
+}));
+
+const mockScheduleDataHandler: TransitObjectDataHandler = {
+    lowerCaseName: 'schedule',
+    className: 'Schedule',
+    classNamePlural: 'Schedules',
+    create: jest.fn().mockResolvedValue({}),
+    read: jest.fn().mockResolvedValue({}),
+    update: jest.fn().mockResolvedValue({}),
+    delete: jest.fn().mockResolvedValue({}),
+    updateBatch: jest.fn().mockImplementation((socket, attributesList) => {
+        try{
+            return Promise.resolve({
+                ids: attributesList.map(item => ({ id: item.id }))
+            });
+        }
+        catch (error) {
+            console.error('Error batch updating schedules: ', error);
+            return TrError.isTrError(error) ? error.export() : { error: 'Error updating batch' };
+        }
+    }),
+};
+
+jest.mock('../../services/transitObjects/TransitObjectsDataHandler', () => ({
+    __esModule: true,
+    default: {
+        schedules: mockScheduleDataHandler
+    },
+    createDataHandlers: jest.fn(() => ({
+        schedules: mockScheduleDataHandler
+    })),
+    TransitObjectDataHandler: jest.fn()
+}));
+
+// Import those modules after mocks are set up
 import transitObjectRoutes from '../transitObjects.socketRoutes';
 import { duplicateServices } from '../../services/transitObjects/transitServices/ServiceDuplicator';
 
+const mockedDuplicateAndSave = duplicateServices as jest.MockedFunction<typeof duplicateServices>;
 const socketStub = new EventEmitter();
 transitObjectRoutes(socketStub);
-jest.mock('../../services/transitObjects/transitServices/ServiceDuplicator', () => {
-    return {
-        duplicateServices: jest.fn(),
-    };
-});
-const mockedDuplicateAndSave = duplicateServices as jest.MockedFunction<typeof duplicateServices>;
-
-beforeEach(() => {
-    jest.clearAllMocks();
-});
 
 describe('Service duplication route', () => {
     test('Duplicate with default options', (done) => {
@@ -71,14 +102,49 @@ describe('Service duplication route', () => {
 });
 
 describe('Schedules update batch route', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
 
-    test('updateSchedulesBatch with default options', (done) => {
-        socketStub.emit('transitSchedules.updateBatch', {}, (status) => {
-            setTimeout(() => {
-                expect(true).toEqual(true);
+    test('updateSchedulesBatch handler is initialized', () => {
+        expect(socketStub.listenerCount('transitSchedules.updateBatch')).toBe(1);
+    });
+
+    test('updateSchedulesBatch with valid attributes', (done) => {
+        const attributeList = [{id: 'test-id-1'}, {id: 'test-id-2'}];
+        
+        socketStub.emit('transitSchedules.updateBatch', attributeList, (response) => {
+            try {
+                // Verify the mock was called
+                expect(mockScheduleDataHandler.updateBatch).toHaveBeenCalledTimes(1);
+                expect(mockScheduleDataHandler.updateBatch).toHaveBeenCalledWith(
+                    socketStub,
+                    attributeList
+                );
+                
+                // Verify the response
+                expect(response).toEqual({
+                    ids: [
+                        { id: 'test-id-1' },
+                        { id: 'test-id-2' }
+                    ]
+                });
                 done();
-            }, 1000); // Wait for 1 second (1000 milliseconds)
+            } catch (error) {
+                done(error);
+            }
         });
     });
 
+    test('updateSchedulesBatch where error occurred', async () => {
+        const invalidAttributeList = null;
+        const response = await new Promise((resolve) => {
+            socketStub.emit('transitSchedules.updateBatch', invalidAttributeList, resolve);
+        });
+        expect(mockScheduleDataHandler.updateBatch).toHaveBeenCalledWith(
+            socketStub,
+            invalidAttributeList
+        );
+        expect(response).toHaveProperty('error');
+    });
 });
