@@ -1,5 +1,5 @@
 /*
- * Copyright 2022, Polytechnique Montreal and contributors
+ * Copyright 2022-2025, Polytechnique Montreal and contributors
  *
  * This file is licensed under the MIT License.
  * License text available at https://opensource.org/licenses/MIT
@@ -7,7 +7,6 @@
 import { EventEmitter } from 'events';
 import transitObjectDataHandlers from '../services/transitObjects/TransitObjectsDataHandler';
 import { duplicateServices } from '../services/transitObjects/transitServices/ServiceDuplicator';
-import { updateSchedulesBatch } from '../services/transitObjects/TransitObjectsDataHandler';
 
 function setupObjectSocketRoutes(socket: EventEmitter) {
     for (const lowerCasePlural in transitObjectDataHandlers) {
@@ -121,12 +120,21 @@ function setupObjectSocketRoutes(socket: EventEmitter) {
                 }
             );
         }
+
+        // Update multiple objects in the database and cache if required
+        if (lowerCasePlural === 'schedules' && dataHandler.updateBatch) {
+            socket.on(`transit${dataHandler.classNamePlural}.updateBatch`, async (attributesList, callback) => {
+                try {
+                    console.log('Socket updateBatch called with:', attributesList);
+                    const response = await dataHandler.updateBatch!(socket, attributesList);
+                    console.log('Success:', response); 
+                    callback(response);
+                } catch (error) {
+                    console.log('Error caught:', error);
+                }
+            });
+        }
     }
-    // Update multiple schedules
-    socket.on('transitSchedules.updateBatch', async (schedules, callback) => {
-        const response = await updateSchedulesBatch(schedules);
-        callback(response);
-    });
 
     // Add duplication sockets routes. We can't add them in the loop above
     // because they are not part of the transitObjectsDataHandlers, as each
