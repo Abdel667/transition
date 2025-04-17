@@ -23,6 +23,7 @@ import ConfirmModal from 'chaire-lib-frontend/lib/components/modal/ConfirmModal'
 import Schedule from 'transition-common/lib/services/schedules/Schedule';
 import Line from 'transition-common/lib/services/line/Line';
 import TransitScheduleBatchPeriod from './TransitScheduleBatchPeriod';
+import saveUtils from 'chaire-lib-common/src/services/objects/SaveUtils'
 
 interface ScheduleBatchFormProps {
     lines: Line[];
@@ -87,13 +88,18 @@ class TransitScheduleBatchEdit extends SaveableObjectForm<Schedule, ScheduleBatc
     //     }
     // }
 
-    onChangeService( toServiceId: string) {
+    onChangeService(toServiceId: string) {
         const lines: Line[] = this.props.lines;
         const schedules: Schedule[] = this.props.schedules;
         this.selectedServiceId = toServiceId;
+        let alreadyHasServiceLines = 0;
         schedules.forEach((schedule) => {
-            const line = lines.find((line) => {return line.getId() === schedule.attributes.line_id })
+            const line = lines.find((line) => { return line.getId() === schedule.attributes.line_id })
             if (line) {
+                if (line.attributes.service_ids && line.attributes.service_ids.includes(toServiceId)) {
+
+                    alreadyHasServiceLines++;
+                }
                 schedule.set('service_id', toServiceId);
                 if (schedule.isNew()) {
                     serviceLocator.selectedObjectsManager.setSelection('schedule', schedules); // ??
@@ -104,6 +110,17 @@ class TransitScheduleBatchEdit extends SaveableObjectForm<Schedule, ScheduleBatc
                 }
             }
         })
+        schedules[0].errors = []
+        if (alreadyHasServiceLines > 0) {
+            if (alreadyHasServiceLines === 1) {
+                schedules[0].errors.push(alreadyHasServiceLines + " line already has a schedule for this service, it will be overritten");
+                console.log("already has one");
+            }
+            else {
+                console.log("already has many");
+                schedules[0].errors.push(alreadyHasServiceLines + " lines already have a schedule for this service, they will be overritten");
+            }
+        }
     }
 
     onChangePeriodsGroup(periodsGroupShortname: string) {
@@ -111,7 +128,7 @@ class TransitScheduleBatchEdit extends SaveableObjectForm<Schedule, ScheduleBatc
         const schedules: Schedule[] = this.props.schedules;
         this.selectedPeriodsGroup = periodsGroupShortname
         schedules.forEach((schedule) => {
-            const line = lines.find((line) => {return line.getId() === schedule.attributes.line_id })
+            const line = lines.find((line) => { return line.getId() === schedule.attributes.line_id })
             if (line) {
                 schedule.set('periods_group_shortname', periodsGroupShortname);
                 if (schedule.isNew()) {
@@ -126,7 +143,7 @@ class TransitScheduleBatchEdit extends SaveableObjectForm<Schedule, ScheduleBatc
         })
     }
 
-    onSave = () => { // en attente fonction d'abdel
+    onSave = async () => { // en attente fonction d'abdel
         const lines = this.props.lines;
         const schedules = this.props.schedules;
         // save
@@ -134,22 +151,33 @@ class TransitScheduleBatchEdit extends SaveableObjectForm<Schedule, ScheduleBatc
         schedules.forEach(async (schedule) => {
             schedule.validate();
             if (schedule.isValid) {
-                const line = lines.find((line) => {return line.getId() === schedule.attributes.line_id })
+                const line = lines.find((line) => { return line.getId() === schedule.attributes.line_id })
                 if (line) {
                     serviceLocator.eventManager.emit('progress', { name: 'SavingSchedule', progress: 0.0 });
+                    serviceLocator.selectedObjectsManager.deselect('schedule');
                     try {
-                        await schedule.save(serviceLocator.socketEventManager);
-                        line.updateSchedule(schedule);
-                        // serviceLocator.selectedObjectsManager.setSelection('line', [line]);
-                        // serviceLocator.selectedObjectsManager.deselect('schedule');
+                        if (line.attributes.service_ids && line.attributes.service_ids.includes(schedule.attributes.service_id)){
+                        }
+                        await schedule.save(serviceLocator.socketEventManager)
+                        line.updateSchedule(schedule)
                     } finally {
                         serviceLocator.eventManager.emit('progress', { name: 'SavingSchedule', progress: 1.0 });
                     }
                 }
             } else {
                 //serviceLocator.selectedObjectsManager.setSelection('schedule', [schedule]);
+                console.log("schedule invalid")
             }
         })
+        // serviceLocator.eventManager.emit('progress', { name: 'SavingSchedule', progress: 0.0 });
+        // try {
+        //     await saveUtils.saveAll<Schedule>(schedules, serviceLocator.socketEventManager, "transitSchedules", undefined);
+        //     line.updateSchedule(schedule);
+        //     // serviceLocator.selectedObjectsManager.setSelection('line', [line]);
+        //     // serviceLocator.selectedObjectsManager.deselect('schedule');
+        // } finally {
+        //     serviceLocator.eventManager.emit('progress', { name: 'SavingSchedule', progress: 1.0 });
+        // }
     };
 
     //TODO tout ce qu'il y a en bas

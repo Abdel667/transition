@@ -155,6 +155,7 @@ const TransitScheduleBatchPeriod: React.FC<TransitScheduleBatchPeriodProps> = (p
                 // schedule.set(`periods[${periodIndex}].inbound_path_id`, inboundPathId);
 
                 const response = schedule.generateForPeriod(periodShortname);
+                console.log(response)
                 if (response.trips) {
                     schedule.set(`periods[${periodIndex}].trips`, response.trips);
                     generatedResponsesTemp.push(response)

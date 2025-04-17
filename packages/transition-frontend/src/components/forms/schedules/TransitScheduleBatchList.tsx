@@ -72,7 +72,6 @@ const TransitScheduleBatchList: React.FunctionComponent<BatchListProps & WithTra
             serviceLocator.collectionManager
         ))
         setState({ isSelectionConfirmed: true, selectedNewSchedules: newSchedules, batchSelectedLines: state.batchSelectedLines })
-        console.log(state.batchSelectedLines)
     }
 
 
@@ -194,6 +193,8 @@ const TransitScheduleBatchList: React.FunctionComponent<BatchListProps & WithTra
                     onClick={function () {
                         // close
                         serviceLocator.selectedObjectsManager.setSelection('scheduleMode', []);
+                        serviceLocator.selectedObjectsManager.deselect('schedule');
+                        serviceLocator.selectedObjectsManager.deselect('line');
                         serviceLocator.eventManager.emit('fullSizePanel.hide');
                     }}
                 />
