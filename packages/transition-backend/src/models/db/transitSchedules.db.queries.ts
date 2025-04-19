@@ -404,7 +404,15 @@ const save = async function (scheduleData: ScheduleAttributes, options: { transa
 
 // FIXME Handle a few promises at a time instead of all at once
 const saveAll = async function (schedulesData: ScheduleAttributes[], options: { transaction?: Knex.Transaction } = {}) {
-    return await Promise.all(schedulesData.map((scheduleData) => save(scheduleData, options)));
+    const saveAllTransaction = async (trx: Knex.Transaction) => {
+        return await Promise.all(
+            schedulesData.map((scheduleData) => save(scheduleData, { ...options, transaction: trx }))
+        );
+    };
+    
+    return options.transaction
+        ? await saveAllTransaction(options.transaction)
+        : await knex.transaction(saveAllTransaction);
 };
 // Private function to get the period ids for a given schedule, select within
 // the current transaction
